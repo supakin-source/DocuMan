@@ -358,15 +358,6 @@ const DECISION_ACTION: Record<Decision, DocumentAction> = {
   reject: DocumentAction.REJECTED,
 };
 
-/** Reasons an approver may pick from, as listed in the design. */
-export const DECISION_REASONS = [
-  "จำนวนเงินไม่ถูกต้อง",
-  "แนบเอกสารไม่ถูกต้อง",
-  "แนบเอกสารไม่ครบ",
-  "เหตุผลไม่ชัดเจน",
-  "อื่นๆ",
-] as const;
-
 export const decideDocumentSchema = z.object({
   decision: z.enum(["approve", "return", "reject"]),
   /** Required for return and reject; ignored on approve. */

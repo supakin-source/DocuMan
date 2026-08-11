@@ -14,7 +14,10 @@ export default auth;
 
 export const config = {
   matcher: [
-    // Everything except Next internals, the auth endpoints and static assets.
-    "/((?!api/auth|_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|webp|ico)$).*)",
+    // Pages only. API routes are excluded on purpose: this layer answers an
+    // anonymous request with a redirect to /login, and a fetch() following that
+    // would receive the login page's HTML instead of a 401. The route handlers
+    // authenticate themselves through requireUser() and reply with JSON.
+    "/((?!api/|_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|webp|ico)$).*)",
   ],
 };
