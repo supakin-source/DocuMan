@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { signOut } from "@/auth";
-import { SignOutIcon, SwitchIcon } from "@/components/icons";
+import { SettingsIcon, SignOutIcon, SwitchIcon } from "@/components/icons";
 
 /**
  * The dashboard header: who you are, plus the role switch and sign-out.
@@ -14,6 +14,7 @@ export function AppHeader({
   subtitle,
   switchTo,
   badgeCount = 0,
+  showAdmin = false,
 }: {
   name: string;
   subtitle: string;
@@ -21,6 +22,8 @@ export function AppHeader({
   switchTo: { href: string; label: string } | null;
   /** Count shown on the switch, e.g. documents waiting in the other view. */
   badgeCount?: number;
+  /** Whether to offer the user-administration screen. */
+  showAdmin?: boolean;
 }) {
   return (
     <header className="flex shrink-0 items-center justify-between gap-3 border-b-2 border-divider px-4 pt-[22px] pb-4">
@@ -30,6 +33,13 @@ export function AppHeader({
       </div>
 
       <div className="flex shrink-0 gap-2">
+        {showAdmin ? (
+          <Link href="/admin" title="ตั้งค่าผู้ใช้งาน" className="icon-btn">
+            <SettingsIcon />
+            <span className="sr-only">ตั้งค่าผู้ใช้งาน</span>
+          </Link>
+        ) : null}
+
         {switchTo ? (
           <Link href={switchTo.href} title={switchTo.label} className="icon-btn relative">
             <SwitchIcon />

@@ -7,7 +7,7 @@ import { BottomNav } from "@/components/bottom-nav";
 import { AlertMark, StatusBadge } from "@/components/status-badge";
 import { prisma } from "@/lib/db";
 import { listOwnDocuments, listPendingForApprover } from "@/lib/domain/documents";
-import { canApprove, canRequest } from "@/lib/roles";
+import { canApprove, canRequest, isAdmin } from "@/lib/roles";
 import { formatMoney, formatThaiDate } from "@/lib/thai";
 
 export const metadata = { title: "หน้าหลัก · DocuMan" };
@@ -60,6 +60,7 @@ export default async function DashboardPage({
             : null
         }
         badgeCount={approverQueue.length}
+        showAdmin={isAdmin(user.roles)}
       />
 
       <div className="no-scrollbar flex flex-1 flex-col gap-[18px] overflow-y-auto px-4 pt-[18px] pb-5">

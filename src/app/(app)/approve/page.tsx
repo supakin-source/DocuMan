@@ -12,7 +12,7 @@ import {
   listPendingForApprover,
 } from "@/lib/domain/documents";
 import { summariseMonth } from "@/lib/domain/stats";
-import { canApprove, canRequest } from "@/lib/roles";
+import { canApprove, canRequest, isAdmin } from "@/lib/roles";
 import { formatMoney, formatThaiDate } from "@/lib/thai";
 
 export const metadata = { title: "ผู้อนุมัติ · DocuMan" };
@@ -55,6 +55,7 @@ export default async function ApproveDashboardPage({
             : null
         }
         badgeCount={correctionCount}
+        showAdmin={isAdmin(user.roles)}
       />
 
       <div className="no-scrollbar flex flex-1 flex-col gap-3.5 overflow-y-auto px-4 pt-[18px] pb-5">

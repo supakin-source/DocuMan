@@ -115,73 +115,78 @@
    Base
    ══════════════════════════════════════════════════════════════════════ */
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
+/* Wrapped in @layer base so Tailwind utilities can override these. Unlayered
+   CSS beats anything in a layer regardless of specificity, which would make
+   a `text-[17px]` on an <h2> silently lose to the 32px rule below. */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
 
-body {
-  margin: 0;
-  background: var(--color-bg);
-  color: var(--color-text);
-  font-family: var(--font-body);
-  font-size: 15px;
-  line-height: 1.55;
-  font-weight: 400;
-}
+  body {
+    margin: 0;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.55;
+    font-weight: 400;
+  }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  font-family: var(--font-heading);
-  font-weight: 800;
-  line-height: 1.12;
-  letter-spacing: -0.015em;
-  margin: 0 0 var(--space-2);
-}
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-heading);
+    font-weight: 800;
+    line-height: 1.12;
+    letter-spacing: -0.015em;
+    margin: 0 0 var(--space-2);
+  }
 
-h1 { font-size: 42px; }
-h2 { font-size: 32px; }
-h3 { font-size: 25px; }
-h4 { font-size: 20px; }
-h5 { font-size: 16px; }
-h6 {
-  font-size: 13px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
+  h1 { font-size: 42px; }
+  h2 { font-size: 32px; }
+  h3 { font-size: 25px; }
+  h4 { font-size: 20px; }
+  h5 { font-size: 16px; }
+  h6 {
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
 
-p { margin: 0 0 var(--space-3); }
-a { color: var(--color-accent); text-underline-offset: 3px; }
-img { display: block; max-width: 100%; }
+  p { margin: 0 0 var(--space-3); }
+  a { color: var(--color-accent); text-underline-offset: 3px; }
+  img { display: block; max-width: 100%; }
 
-input,
-textarea,
-select,
-button {
-  font-family: var(--font-body);
-}
+  input,
+  textarea,
+  select,
+  button {
+    font-family: var(--font-body);
+  }
 
-:focus { outline: none; }
-:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-}
-::selection {
-  background: color-mix(in srgb, var(--color-accent) 30%, transparent);
-}
+  :focus { outline: none; }
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--color-accent) 30%, transparent);
+  }
 
-/* The phone frame hides its scrollbars; the design has no visible track. */
-.no-scrollbar {
-  scrollbar-width: none;
-}
-.no-scrollbar::-webkit-scrollbar {
-  width: 0;
-  height: 0;
+  /* The phone frame hides its scrollbars; the design has no visible track. */
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════════════════

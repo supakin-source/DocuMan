@@ -25,6 +25,20 @@ pnpm exec prisma migrate dev
 pnpm dev
 ```
 
+### The first admin
+
+The HR fields a document prints — employee code, position, approver — cannot come
+from Google sign-in, so someone has to set them. Grant the first admin by hand:
+
+```bash
+# sign in with Google once first, so the account exists
+pnpm admin:grant someone@assetfive.co.th
+```
+
+They can then set everyone else up at `/admin`. Creating the row before that
+first sign-in would leave a User with no linked Account, which Auth.js refuses to
+attach an OAuth identity to — hence the ordering.
+
 ### Environment
 
 Every variable is documented in `.env.example`. The ones without a sensible
@@ -57,6 +71,7 @@ Google Cloud project; sign-in and Drive access share a single consent screen.
 | `pnpm db:migrate`  | Create and apply a migration               |
 | `pnpm db:deploy`   | Apply migrations (deployment)              |
 | `pnpm db:studio`   | Prisma Studio                              |
+| `pnpm admin:grant` | Grant ADMIN to an existing account          |
 
 ## Layout
 
@@ -68,10 +83,11 @@ src/auth.config.ts        Edge-safe Auth.js config — shared with src/proxy.ts
 src/auth.ts               Full Auth.js config with the Prisma adapter
 src/proxy.ts              Route protection (Next 16 `proxy`, formerly middleware)
 src/components/           Shared UI, including the printable document sheets
-src/lib/domain/           Document lifecycle and the rules around it
+src/lib/domain/           Document lifecycle, user administration, the rules
 src/lib/google/           Per-user OAuth client and Drive access
 src/lib/ocr/              Text and structured extraction via Gemini
 src/lib/thai.ts           Buddhist Era dates and baht-in-words
+scripts/grant-admin.ts    Bootstraps the first admin
 design/                   The Claude Design export this is implemented against
 ```
 
@@ -89,6 +105,8 @@ design/                   The Claude Design export this is implemented against
 | `/documents/[id]`        | A submitted document, and the way back to edit |
 | `/approve`               | Approver dashboard: queue, month, trend        |
 | `/approve/[id]`          | Review and decide                              |
+| `/admin`                 | User administration (ADMIN only)               |
+| `/admin/[id]`            | HR fields, approver and roles for one account  |
 
 ## Notes
 
@@ -107,14 +125,21 @@ design/                   The Claude Design export this is implemented against
   PDF export. The prototype measured and split pages itself; letting the
   browser do it keeps long claims correct at any content length.
 - **HR profile.** `employeeCode`, `position` and `approverId` cannot come from
-  Google sign-in and must be set by an admin. Submitting is refused with a clear
-  message until an approver is assigned.
+  Google sign-in and are maintained at `/admin`. Submitting is refused with a
+  clear message until an approver is assigned, and the admin list flags every
+  account still missing one.
+- **Approval chains.** An approver assignment is rejected if it would close a
+  loop — if the candidate already reports, directly or through others, to the
+  person being edited — since no document inside such a loop could reach anyone
+  allowed to decide it. An admin also cannot remove their own ADMIN role, which
+  would otherwise lock the organisation out of `/admin`.
 
 ## Status
 
 Both flows are implemented end to end: a requester can build, sign and submit a
-claim, and an approver can approve, return or reject it. 33 tests cover the Thai
-formatting and the document lifecycle.
+claim, an approver can approve, return or reject it, and an admin can set up the
+accounts both depend on. 43 tests cover the Thai formatting, the document
+lifecycle and the administration rules.
 
 Not yet built: the tab-bar destinations the design greys out (เอกสารของฉัน,
-ประวัติ, แจ้งเตือน, โปรไฟล์), and an admin screen for the HR profile fields.
+ประวัติ, แจ้งเตือน, โปรไฟล์).
