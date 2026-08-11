@@ -1,26 +1,325 @@
 @import "tailwindcss";
 
+/*
+ * Modernist — the design system from design/_ds/modernist-…/styles.css, ported
+ * with DocuMan's accent override (the app re-tints the system's orange-red to
+ * the Asset Five red) already folded into the base values.
+ *
+ * Flat by intent: every radius is 0. Keep it that way — rounding a corner here
+ * breaks the system's whole character.
+ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-bg: #f3f2f2;
+  --color-surface: #eae9e9;
+  --color-text: #201e1d;
+  --color-accent: #cc1517;
+  --color-accent-2: #cc1517;
+  --color-divider: color-mix(in srgb, #201e1d 40%, transparent);
+
+  /* Tonal ramps — generated in OKLCH on one shared lightness scale, so the
+     same step of any role matches the others in visual value. */
+  --color-neutral-100: #f8f4f4;
+  --color-neutral-200: #eae7e7;
+  --color-neutral-300: #d7d3d3;
+  --color-neutral-400: #bab6b6;
+  --color-neutral-500: #9b9797;
+  --color-neutral-600: #7d7979;
+  --color-neutral-700: #605d5d;
+  --color-neutral-800: #444141;
+  --color-neutral-900: #2d2b2b;
+
+  --color-accent-100: #fdeceb;
+  --color-accent-200: #f9cfcd;
+  --color-accent-300: #f2a8a5;
+  --color-accent-400: #e3625f;
+  --color-accent-500: #cc1517;
+  --color-accent-600: #b31114;
+  --color-accent-700: #8f0d10;
+  --color-accent-800: #6b0a0c;
+  --color-accent-900: #4a0708;
+
+  /* Status colours for the document lifecycle. Blue and green sit outside the
+     accent ramp on purpose: "รออนุมัติ" and "อนุมัติแล้ว" must not read as the
+     brand red that marks problems. */
+  --color-status-pending: oklch(48% 0.13 250);
+  --color-status-approved: oklch(52% 0.13 150);
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+
+  --shadow-sm: 0 1px 2px color-mix(in srgb, #2d2b2b 14%, transparent);
+  --shadow-md: 0 3px 10px color-mix(in srgb, #2d2b2b 16%, transparent);
+  --shadow-lg: 0 12px 32px color-mix(in srgb, #2d2b2b 22%, transparent);
 }
 
+/* Expose the system's tokens to Tailwind utilities, so `bg-surface`,
+   `text-accent-700`, `gap-3` and friends resolve to the same values the
+   component classes below use. */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--color-bg);
+  --color-surface: var(--color-surface);
+  --color-text: var(--color-text);
+  --color-divider: var(--color-divider);
+
+  --color-accent: var(--color-accent);
+  --color-accent-100: var(--color-accent-100);
+  --color-accent-200: var(--color-accent-200);
+  --color-accent-300: var(--color-accent-300);
+  --color-accent-400: var(--color-accent-400);
+  --color-accent-500: var(--color-accent-500);
+  --color-accent-600: var(--color-accent-600);
+  --color-accent-700: var(--color-accent-700);
+  --color-accent-800: var(--color-accent-800);
+  --color-accent-900: var(--color-accent-900);
+
+  --color-neutral-100: var(--color-neutral-100);
+  --color-neutral-200: var(--color-neutral-200);
+  --color-neutral-300: var(--color-neutral-300);
+  --color-neutral-400: var(--color-neutral-400);
+  --color-neutral-500: var(--color-neutral-500);
+  --color-neutral-600: var(--color-neutral-600);
+  --color-neutral-700: var(--color-neutral-700);
+  --color-neutral-800: var(--color-neutral-800);
+  --color-neutral-900: var(--color-neutral-900);
+
+  --color-status-pending: var(--color-status-pending);
+  --color-status-approved: var(--color-status-approved);
+
+  /* Latin comes from Archivo; Thai falls through to Noto Sans Thai, which
+     Archivo has no glyphs for. Both are loaded by next/font in layout.tsx. */
+  --font-heading: var(--font-archivo), var(--font-noto-thai), system-ui, sans-serif;
+  --font-body: var(--font-archivo), var(--font-noto-thai), system-ui, sans-serif;
+  /* Official Thai paperwork is set in TH Sarabun New; Sarabun is the freely
+     licensed equivalent and is used for the printed certificate. */
+  --font-document: var(--font-sarabun), "TH Sarabun New", serif;
+
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ══════════════════════════════════════════════════════════════════════════
+   Base
+   ══════════════════════════════════════════════════════════════════════ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55;
+  font-weight: 400;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -0.015em;
+  margin: 0 0 var(--space-2);
+}
+
+h1 { font-size: 42px; }
+h2 { font-size: 32px; }
+h3 { font-size: 25px; }
+h4 { font-size: 20px; }
+h5 { font-size: 16px; }
+h6 {
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+p { margin: 0 0 var(--space-3); }
+a { color: var(--color-accent); text-underline-offset: 3px; }
+img { display: block; max-width: 100%; }
+
+input,
+textarea,
+select,
+button {
+  font-family: var(--font-body);
+}
+
+:focus { outline: none; }
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+::selection {
+  background: color-mix(in srgb, var(--color-accent) 30%, transparent);
+}
+
+/* The phone frame hides its scrollbars; the design has no visible track. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Components — plain CSS classes, as authored in the design system.
+   ══════════════════════════════════════════════════════════════════════ */
+
+@layer components {
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    text-decoration: none;
+    font-family: var(--font-heading);
+    font-weight: 800;
+    font-size: 14px;
+    line-height: 1.2;
+    color: var(--color-text);
+    background: transparent;
+    border: 1px solid transparent;
+    padding: var(--space-2) calc(var(--space-3) * 1.2);
+    border-radius: var(--radius-md);
+  }
+  .btn svg { display: block; }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .btn-primary { background: var(--color-accent); color: #fff; }
+  .btn-primary:not(:disabled):hover { background: var(--color-accent-600); }
+  .btn-primary:not(:disabled):active { background: var(--color-accent-700); }
+
+  .btn-secondary { border-color: var(--color-divider); }
+  .btn-secondary:not(:disabled):hover {
+    background: color-mix(in srgb, var(--color-text) 7%, transparent);
+  }
+  .btn-secondary:not(:disabled):active {
+    background: color-mix(in srgb, var(--color-text) 14%, transparent);
+  }
+
+  .btn-ghost { color: var(--color-accent); padding-inline: var(--space-1); }
+  .btn-ghost:not(:disabled):hover {
+    background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  }
+
+  .btn-block { width: 100%; justify-content: center; }
+
+  .field > label {
+    display: block;
+    font-size: 12px;
+    margin-bottom: 5px;
+    color: color-mix(in srgb, var(--color-text) 70%, transparent);
+  }
+
+  .input {
+    width: 100%;
+    min-height: 36px;
+    padding: 6px 10px;
+    font: inherit;
+    font-size: 14px;
+    color: var(--color-text);
+    caret-color: var(--color-accent);
+    background: #fff;
+    border: 1px solid var(--color-divider);
+    border-radius: var(--radius-md);
+  }
+  .input:hover {
+    border-color: color-mix(in srgb, var(--color-text) 45%, transparent);
+  }
+  .input:focus-visible {
+    border-color: var(--color-accent);
+    outline-offset: 0;
+  }
+  .input:disabled,
+  .input[readonly] {
+    background: var(--color-neutral-200);
+    cursor: not-allowed;
+  }
+  textarea.input { min-height: 90px; resize: vertical; }
+
+  /* The 36×36 bordered square used for every icon-only control in the chrome. */
+  .icon-btn {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid var(--color-divider);
+    cursor: pointer;
+    color: var(--color-text);
+    flex-shrink: 0;
+  }
+  .icon-btn:not(:disabled):hover {
+    background: color-mix(in srgb, var(--color-text) 7%, transparent);
+  }
+  .icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+  }
+
+  .elev-sm { box-shadow: var(--shadow-sm); }
+  .elev-md { box-shadow: var(--shadow-md); }
+  .elev-lg { box-shadow: var(--shadow-lg); }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    font-size: 11px;
+    letter-spacing: 0.02em;
+    padding: 3px 10px;
+  }
+  .tag-accent { background: var(--color-accent-100); color: var(--color-accent-800); }
+  .tag-neutral { background: var(--color-neutral-100); color: var(--color-neutral-800); }
+
+  .table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .table th {
+    text-align: left;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--color-text) 60%, transparent);
+    padding: var(--space-2);
+    border-bottom: 2px solid var(--color-divider);
+  }
+  .table td {
+    padding: var(--space-2);
+    border-bottom: 1px solid var(--color-divider);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
