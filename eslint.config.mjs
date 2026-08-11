@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // The Claude Design export kept for reference. Not built, not shipped —
+    // it is the spec the app is implemented against, so it stays as authored.
+    "design/**",
+    // Emitted by `prisma generate`; regenerated on install.
+    "src/generated/**",
   ]),
 ]);
 

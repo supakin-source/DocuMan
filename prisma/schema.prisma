@@ -1,10 +1,9 @@
-// DocuMan — Prisma schema
+// DocuMan — expense reimbursement for Asset Five Development Co., Ltd.
 //
-// Scope of this file right now: authentication (Auth.js v5 / @auth/prisma-adapter)
-// plus the minimum User fields the Google Drive storage layer needs.
-//
-// The document/domain models are intentionally absent: they are derived from the
-// DocuMan design (DocuMan.dc.html) and are added once that design lands in the repo.
+// Domain model derived from the DocuMan design (design/DocuMan.dc.html):
+// a requester builds an expense document from scanned receipts, signs it, and
+// submits it to an approver, who approves, rejects, or sends it back for
+// correction — each transition recorded on the document's timeline.
 
 generator client {
   provider = "prisma-client"
@@ -15,9 +14,7 @@ datasource db {
   provider = "postgresql"
 }
 
-// --- Auth.js models -------------------------------------------------------
-// Field names inside Account/Session follow the adapter's expectations
-// (snake_case for OAuth token fields) and must not be renamed.
+// ─── Identity ─────────────────────────────────────────────────────────────
 
 model User {
   id            String    @id @default(cuid())
@@ -26,23 +23,267 @@ model User {
   emailVerified DateTime?
   image         String?
 
-  role UserRole @default(MEMBER)
+  /// A single account can hold several roles — the design lets one person switch
+  /// between the requester and approver views without signing out.
+  roles AppRole[] @default([REQUESTER])
 
-  /// Google Drive folder that holds this user's DocuMan uploads. Created lazily
-  /// on first upload; null until then.
+  // --- HR profile ---------------------------------------------------------
+  // Google sign-in supplies only name, e-mail and avatar. These fields print on
+  // the document and cannot be inferred, so they are maintained separately (by
+  // an ADMIN) and are null until then.
+  /// Payroll identifier shown as "รหัสพนักงาน", e.g. EMP-10234.
+  employeeCode String? @unique
+  /// Job title shown as "ตำแหน่ง", e.g. เจ้าหน้าที่ขายอาวุโส.
+  position     String?
+  /// Department shown on the approver's list, e.g. ฝ่ายขาย.
+  department   String?
+
+  /// Default approver for this user's documents. Self-referential: an approver
+  /// is a User too, and may in turn report to someone else.
+  approverId String?
+  approver   User?   @relation("UserApprover", fields: [approverId], references: [id], onDelete: SetNull)
+  reports    User[]  @relation("UserApprover")
+
+  /// Google Drive folder holding this user's uploads. Created on first upload.
   driveRootFolderId String?
 
-  accounts Account[]
-  sessions Session[]
+  /// Reusable signature, so a returning user need not redraw it. PNG bytes.
+  signature Bytes?
+
+  accounts  Account[]
+  sessions  Session[]
+  documents ExpenseDocument[] @relation("DocumentOwner")
+  decisions ExpenseDocument[] @relation("DocumentDecider")
+  events    DocumentEvent[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-enum UserRole {
+enum AppRole {
+  /// Can create and submit documents ("ผู้จัดทำ").
+  REQUESTER
+  /// Can approve, reject or return others' documents ("ผู้อนุมัติ").
+  APPROVER
+  /// Can maintain the HR profile fields above.
   ADMIN
-  MEMBER
 }
+
+// ─── Expense documents ────────────────────────────────────────────────────
+
+model ExpenseDocument {
+  id String @id @default(cuid())
+
+  /// Human-facing running number, e.g. CPC-2026-000512. Allocated on submit.
+  docNo String? @unique
+
+  ownerId String
+  owner   User   @relation("DocumentOwner", fields: [ownerId], references: [id])
+
+  status ExpenseStatus @default(DRAFT)
+
+  /// Top-level category. The design ships one group ("ค่าเดินทาง"); the per-line
+  /// breakdown lives on ExpenseItem.type.
+  category ExpenseCategory @default(TRAVEL)
+
+  /// Cost centre / project, e.g. "CC-4102 · ฝ่ายขาย".
+  project     String?
+  description String?
+  /// Why no receipt was obtainable — the premise of ใบรับรองแทนใบเสร็จรับเงิน.
+  reason      String?
+  paymentType PaymentType @default(CASH)
+
+  /// Whether to print ใบรับรองแทนใบเสร็จรับเงิน alongside the detail sheet.
+  includeCertificate Boolean @default(true)
+
+  /// Sum of the items, in THB. Denormalised so lists and dashboards do not have
+  /// to aggregate; recomputed on every write via recalculateTotal().
+  totalAmount Decimal @default(0) @db.Decimal(12, 2)
+
+  /// Signature bytes captured at submit time, not a reference to User.signature:
+  /// the document must keep the mark as it was signed even if the user later
+  /// changes their stored signature.
+  requesterSignature Bytes?
+  submittedAt        DateTime?
+
+  /// Whoever approved, rejected, or returned it — not necessarily owner.approver.
+  decidedById String?
+  decidedBy   User?   @relation("DocumentDecider", fields: [decidedById], references: [id], onDelete: SetNull)
+  decidedAt   DateTime?
+  /// Approver's mark. Only set on APPROVED.
+  approverSignature Bytes?
+  /// Free-text note the approver may leave with any decision.
+  decisionComment   String?
+  /// Reason shown to the requester on CORRECTION or REJECTED.
+  decisionReason    String?
+
+  items       ExpenseItem[]
+  attachments Attachment[]
+  timeline    DocumentEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId, status])
+  @@index([status, submittedAt])
+}
+
+enum ExpenseStatus {
+  /// Being built; not yet visible to an approver.
+  DRAFT
+  /// Signed and awaiting a decision ("รออนุมัติ").
+  PENDING
+  /// Returned to the requester with a reason ("ต้องแก้ไข").
+  CORRECTION
+  /// Declined ("ไม่อนุมัติ").
+  REJECTED
+  /// Approved ("อนุมัติแล้ว").
+  APPROVED
+}
+
+enum ExpenseCategory {
+  /// ค่าเดินทาง
+  TRAVEL
+}
+
+enum PaymentType {
+  /// เงินสด
+  CASH
+  /// โอนเงิน
+  TRANSFER
+  /// บัตรเครดิต
+  CREDIT_CARD
+}
+
+model ExpenseItem {
+  id String @id @default(cuid())
+
+  documentId String
+  document   ExpenseDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  type ExpenseItemType
+
+  /// Date the expense was incurred. Date-only; the design has no time component.
+  incurredOn DateTime @db.Date
+
+  // Route — present for PERSONAL_VEHICLE and PUBLIC_TRANSPORT, null for TOLL.
+  origin      String?
+  destination String?
+  purpose     String? @default("ไปปฏิบัติงาน")
+
+  // Mileage — PERSONAL_VEHICLE only. amount is derived: distanceKm × ratePerKm.
+  distanceKm Decimal? @db.Decimal(10, 2)
+  ratePerKm  Decimal? @db.Decimal(10, 2)
+
+  amount Decimal @default(0) @db.Decimal(12, 2)
+
+  /// Supporting image or PDF (map screenshot, ticket, toll receipt).
+  attachment Attachment?
+
+  /// Display order within the document, and the row number on the certificate.
+  sortOrder Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([documentId, sortOrder])
+}
+
+enum ExpenseItemType {
+  /// พาหนะส่วนบุคคล — amount computed from distance × rate.
+  PERSONAL_VEHICLE
+  /// รถโดยสารสาธารณะ — amount entered directly.
+  PUBLIC_TRANSPORT
+  /// ค่าผ่านทางพิเศษ — amount entered directly, no route.
+  TOLL
+}
+
+// ─── Files ────────────────────────────────────────────────────────────────
+
+model Attachment {
+  id String @id @default(cuid())
+
+  /// Google Drive file id. The bytes never live in Postgres.
+  driveFileId String @unique
+  fileName    String
+  mimeType    String
+  /// Size in bytes as reported by Drive.
+  sizeBytes   Int?
+
+  documentId String
+  document   ExpenseDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  /// Set when this file backs a specific line item. An attachment always belongs
+  /// to a document; linking it to an item is optional.
+  itemId String? @unique
+  item   ExpenseItem? @relation(fields: [itemId], references: [id], onDelete: SetNull)
+
+  /// Raw OCR transcription, kept so re-reading a document costs nothing.
+  ocrText String?
+
+  createdAt DateTime @default(now())
+
+  @@index([documentId])
+}
+
+// ─── Audit trail ──────────────────────────────────────────────────────────
+
+model DocumentEvent {
+  id String @id @default(cuid())
+
+  documentId String
+  document   ExpenseDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  action DocumentAction
+
+  /// Free-text detail appended to the action, e.g. the correction reason.
+  detail String?
+
+  /// Who acted. Kept alongside a name snapshot so the trail survives the actor
+  /// being deleted or renamed.
+  actorId   String?
+  actor     User?   @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  actorName String
+  /// Role the actor held at the time, e.g. "พนักงาน" or "หัวหน้างาน".
+  actorRole String
+
+  at DateTime @default(now())
+
+  @@index([documentId, at])
+}
+
+enum DocumentAction {
+  /// สร้างเอกสาร
+  CREATED
+  /// ลงลายเซ็นและส่งอนุมัติ
+  SUBMITTED
+  /// แก้ไขและส่งอนุมัติอีกครั้ง
+  RESUBMITTED
+  /// อนุมัติเอกสาร
+  APPROVED
+  /// ขอให้แก้ไข
+  RETURNED
+  /// ไม่อนุมัติเอกสาร
+  REJECTED
+}
+
+// ─── Running numbers ──────────────────────────────────────────────────────
+
+/// One row per prefix+year, incremented under a transaction to allocate docNo.
+model DocumentSequence {
+  prefix String
+  year   Int
+  /// Last number issued. The next document gets `last + 1`.
+  last   Int    @default(0)
+
+  updatedAt DateTime @updatedAt
+
+  @@id([prefix, year])
+}
+
+// ─── Auth.js models ───────────────────────────────────────────────────────
+// Field names inside Account/Session follow the adapter's expectations
+// (snake_case for OAuth token fields) and must not be renamed.
 
 model Account {
   userId            String

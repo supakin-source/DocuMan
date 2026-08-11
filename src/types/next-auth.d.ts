@@ -1,16 +1,17 @@
-import type { UserRole } from "@/generated/prisma/enums";
+import type { AppRole } from "@/generated/prisma/enums";
 import type { DefaultSession } from "next-auth";
 
 declare module "next-auth" {
   interface Session {
     user: {
       id: string;
-      role: UserRole;
+      /** Every role the account holds; a person may be both requester and approver. */
+      roles: AppRole[];
     } & DefaultSession["user"];
   }
 
   interface User {
-    role: UserRole;
+    roles: AppRole[];
   }
 }
 
