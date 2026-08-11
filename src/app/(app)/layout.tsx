@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import { PhoneFrame } from "@/components/phone-frame";
-import { ToastProvider } from "@/components/toast";
 
 /**
  * Everything behind sign-in. `src/proxy.ts` already turns anonymous requests
@@ -13,9 +12,5 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
-  return (
-    <ToastProvider>
-      <PhoneFrame>{children}</PhoneFrame>
-    </ToastProvider>
-  );
+  return <PhoneFrame>{children}</PhoneFrame>;
 }

@@ -7,6 +7,7 @@ import { BottomNav } from "@/components/bottom-nav";
 import { AlertMark, StatusBadge } from "@/components/status-badge";
 import { prisma } from "@/lib/db";
 import { listOwnDocuments, listPendingForApprover } from "@/lib/domain/documents";
+import { countUnreadNotifications } from "@/lib/domain/notifications";
 import { canApprove, canRequest, isAdmin } from "@/lib/roles";
 import { formatMoney, formatThaiDate } from "@/lib/thai";
 
@@ -29,7 +30,7 @@ export default async function DashboardPage({
         ? ExpenseStatus.CORRECTION
         : undefined;
 
-  const [profile, documents, counts, approverQueue] = await Promise.all([
+  const [profile, documents, counts, approverQueue, unread] = await Promise.all([
     prisma.user.findUniqueOrThrow({
       where: { id: user.id },
       select: { name: true, position: true, department: true },
@@ -41,6 +42,7 @@ export default async function DashboardPage({
       _count: { _all: true },
     }),
     canApprove(user.roles) ? listPendingForApprover(user.id) : Promise.resolve([]),
+    countUnreadNotifications(user.id),
   ]);
 
   const countOf = (status: ExpenseStatus) =>
@@ -134,7 +136,7 @@ export default async function DashboardPage({
         </section>
       </div>
 
-      <BottomNav variant="requester" />
+      <BottomNav variant="requester" unreadCount={unread} />
     </div>
   );
 }

@@ -50,6 +50,12 @@ model User {
   /// Reusable signature, so a returning user need not redraw it. PNG bytes.
   signature Bytes?
 
+  /// When this user last opened their notifications. Anything on their documents
+  /// that happened after this counts as unread. A single timestamp rather than a
+  /// row per notification: the feed is derived from DocumentEvent, so there is
+  /// nothing per-item to store.
+  notificationsReadAt DateTime?
+
   accounts  Account[]
   sessions  Session[]
   documents ExpenseDocument[] @relation("DocumentOwner")

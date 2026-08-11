@@ -102,9 +102,13 @@ design/                   The Claude Design export this is implemented against
 | `/create/[id]/review`    | Confirm and correct what OCR proposed          |
 | `/create/[id]/sign`      | Draw the requester's signature                 |
 | `/create/[id]/preview`   | A4 preview, certificate toggle, submit         |
+| `/documents`             | Every document you raised, filtered by status   |
 | `/documents/[id]`        | A submitted document, and the way back to edit |
 | `/approve`               | Approver dashboard: queue, month, trend        |
 | `/approve/[id]`          | Review and decide                              |
+| `/approve/history`       | Everything you have ruled on                   |
+| `/notifications`         | Verdicts on your claims, and what awaits you   |
+| `/profile`               | Your details, roles and stored signature       |
 | `/admin`                 | User administration (ADMIN only)               |
 | `/admin/[id]`            | HR fields, approver and roles for one account  |
 
@@ -128,6 +132,10 @@ design/                   The Claude Design export this is implemented against
   Google sign-in and are maintained at `/admin`. Submitting is refused with a
   clear message until an approver is assigned, and the admin list flags every
   account still missing one.
+- **Notifications are derived, not stored.** Every event worth telling someone
+  about is already on DocumentEvent, so a parallel table would only be a second
+  copy to keep in step. Read state is one timestamp per user; anything newer is
+  unread. Opening the screen is what marks them read.
 - **Approval chains.** An approver assignment is rejected if it would close a
   loop — if the candidate already reports, directly or through others, to the
   person being edited — since no document inside such a loop could reach anyone
@@ -136,10 +144,7 @@ design/                   The Claude Design export this is implemented against
 
 ## Status
 
-Both flows are implemented end to end: a requester can build, sign and submit a
-claim, an approver can approve, return or reject it, and an admin can set up the
-accounts both depend on. 43 tests cover the Thai formatting, the document
-lifecycle and the administration rules.
-
-Not yet built: the tab-bar destinations the design greys out (เอกสารของฉัน,
-ประวัติ, แจ้งเตือน, โปรไฟล์).
+Every screen in the design is built, including the four tab-bar destinations it
+greys out — those had no drawn design, so they follow the system's own
+conventions. 51 tests cover the Thai formatting, the document lifecycle, the
+administration rules and the notification feed.

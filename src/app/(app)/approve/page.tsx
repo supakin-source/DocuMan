@@ -11,6 +11,7 @@ import {
   listApprovedByApprover,
   listPendingForApprover,
 } from "@/lib/domain/documents";
+import { countUnreadNotifications } from "@/lib/domain/notifications";
 import { summariseMonth } from "@/lib/domain/stats";
 import { canApprove, canRequest, isAdmin } from "@/lib/roles";
 import { formatMoney, formatThaiDate } from "@/lib/thai";
@@ -28,7 +29,7 @@ export default async function ApproveDashboardPage({
   // Clamped at 0: there is nothing to show in the future.
   const offset = Number.isFinite(rawOffset) ? Math.min(0, rawOffset) : 0;
 
-  const [profile, pending, approved, correctionCount] = await Promise.all([
+  const [profile, pending, approved, correctionCount, unread] = await Promise.all([
     prisma.user.findUniqueOrThrow({
       where: { id: user.id },
       select: { name: true, position: true },
@@ -38,6 +39,7 @@ export default async function ApproveDashboardPage({
     prisma.expenseDocument.count({
       where: { ownerId: user.id, status: ExpenseStatus.CORRECTION },
     }),
+    countUnreadNotifications(user.id),
   ]);
 
   const stats = summariseMonth(approved, offset);
@@ -210,7 +212,7 @@ export default async function ApproveDashboardPage({
         </section>
       </div>
 
-      <BottomNav variant="approver" />
+      <BottomNav variant="approver" unreadCount={unread} />
     </div>
   );
 }

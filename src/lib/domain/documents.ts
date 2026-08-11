@@ -146,6 +146,27 @@ export function listPendingForApprover(approverId: string, take = 50) {
   });
 }
 
+/**
+ * Everything this approver has ruled on, whatever the verdict — the history
+ * screen, as opposed to listApprovedByApprover which feeds the money figures.
+ */
+export function listDecidedByApprover(
+  approverId: string,
+  options: { status?: ExpenseStatus; take?: number } = {},
+) {
+  return prisma.expenseDocument.findMany({
+    where: {
+      decidedById: approverId,
+      ...(options.status ? { status: options.status } : {}),
+    },
+    orderBy: { decidedAt: "desc" },
+    take: options.take ?? 100,
+    include: {
+      owner: { select: { id: true, name: true, position: true } },
+    },
+  });
+}
+
 /** Documents this approver has already approved, for the dashboard statistics. */
 export function listApprovedByApprover(approverId: string, take = 500) {
   return prisma.expenseDocument.findMany({
