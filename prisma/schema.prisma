@@ -1,0 +1,89 @@
+// DocuMan — Prisma schema
+//
+// Scope of this file right now: authentication (Auth.js v5 / @auth/prisma-adapter)
+// plus the minimum User fields the Google Drive storage layer needs.
+//
+// The document/domain models are intentionally absent: they are derived from the
+// DocuMan design (DocuMan.dc.html) and are added once that design lands in the repo.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// --- Auth.js models -------------------------------------------------------
+// Field names inside Account/Session follow the adapter's expectations
+// (snake_case for OAuth token fields) and must not be renamed.
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+
+  role UserRole @default(MEMBER)
+
+  /// Google Drive folder that holds this user's DocuMan uploads. Created lazily
+  /// on first upload; null until then.
+  driveRootFolderId String?
+
+  accounts Account[]
+  sessions Session[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum UserRole {
+  ADMIN
+  MEMBER
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
