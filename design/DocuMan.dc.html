@@ -1,0 +1,2210 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="_ds/modernist-1f07dc86-d942-475d-8526-1dbd4b018ae5/styles.css">
+<script src="_ds/modernist-1f07dc86-d942-475d-8526-1dbd4b018ae5/_ds_bundle.js"></script>
+<style>
+:root{
+--color-accent:#cc1517;
+--color-accent-100:#fdeceb;
+--color-accent-200:#f9cfcd;
+--color-accent-300:#f2a8a5;
+--color-accent-400:#e3625f;
+--color-accent-500:#cc1517;
+--color-accent-600:#b31114;
+--color-accent-700:#8f0d10;
+--color-accent-800:#6b0a0c;
+--color-accent-900:#4a0708;
+--color-accent-2:#cc1517;
+--color-accent-2-100:#fdeceb;
+--color-accent-2-300:#f2a8a5;
+--color-accent-2-500:#cc1517;
+--color-accent-2-700:#8f0d10;
+}
+body{margin:0}
+input,textarea,select{font-family:var(--font-body)}
+::-webkit-scrollbar{width:0;height:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:var(--color-bg);display:flex;flex-direction:column;align-items:center;gap:18px;padding:28px 16px 60px;font-family:var(--font-body);color:var(--color-text);position:relative">
+
+  <div style="width:390px;max-width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+    <div style="display:flex;gap:6px">
+      <button style="font-family:var(--font-heading);font-weight:800;font-size:11px;letter-spacing:.04em;padding:6px 10px;border:1px solid var(--color-divider);background:{{ empBtnBg }};color:{{ empBtnColor }};cursor:pointer" onclick="{{ switchToEmployee }}">ผู้จัดทำ</button>
+      <button style="font-family:var(--font-heading);font-weight:800;font-size:11px;letter-spacing:.04em;padding:6px 10px;border:1px solid var(--color-divider);background:{{ mgrBtnBg }};color:{{ mgrBtnColor }};cursor:pointer" onclick="{{ switchToManager }}">ผู้อนุมัติ</button>
+    </div>
+    <button style="font-size:11px;color:var(--color-text);opacity:.55;background:transparent;border:1px solid var(--color-divider);padding:6px 10px;cursor:pointer;font-family:var(--font-body)" onclick="{{ resetDemo }}">รีเซ็ตข้อมูลตัวอย่าง</button>
+  </div>
+
+  <div style="width:390px;max-width:100%;height:844px;background:#fff;border:2px solid var(--color-divider);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden;position:relative">
+
+    <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:1;display:flex;flex-direction:column;padding:48px 28px 32px;justify-content:center">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:18px">
+        <img src="uploads/pasted-1785759031170-0.png" alt="DocuMan" style="width:345px;max-width:100%;height:auto;display:block">
+        <h1 style="margin:-44px 0 0;font-size:30px;font-weight:800;color:var(--color-accent);text-align:center">DocuMan</h1>
+        <p style="margin:0;font-size:14px;letter-spacing:.02em;color:var(--color-text);opacity:.7;text-align:center">Document Management Solutions</p>
+        <button class="btn btn-primary btn-block" onclick="{{ doLogin }}" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;color:#fff;margin-top:6px">
+          <svg width="20" height="20" viewBox="0 0 48 48" style="flex-shrink:0;display:block"><path fill="#fff" d="M24 20v8.2h11.6c-.5 2.9-3.5 8.5-11.6 8.5-7 0-12.7-5.8-12.7-12.9S17 10.9 24 10.9c4 0 6.7 1.7 8.2 3.2l5.6-5.4C34.2 5.4 29.6 3.5 24 3.5 12.7 3.5 3.5 12.7 3.5 24S12.7 44.5 24 44.5c11.8 0 19.6-8.3 19.6-20 0-1.6-.2-2.8-.4-4H24z"></path></svg>
+          <span style="line-height:1">ลงชื่อเข้าใช้ด้วย Google</span>
+        </button>
+      </div>
+      <div style="position:absolute;left:0;right:0;bottom:24px;display:flex;flex-direction:column;align-items:center;gap:3px">
+        <p style="margin:0;font-size:10px;opacity:.45;text-align:center">Copyright © 2026 Asset Five Development Co., Ltd. All rights reserved.</p>
+        <p style="margin:0;font-size:10px;opacity:.45">Version 0.1.0</p>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;height:100%">
+      <div style="padding:22px var(--space-4) 16px;border-bottom:2px solid var(--color-divider);display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div>
+          <h2 style="margin:0;font-size:22px">{{ employee.name }}</h2>
+          <p style="margin:6px 0 0;font-size:12px;opacity:.6">{{ employee.position }}</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0">
+          <sc-if value="{{ canSwitchRole }}" hint-placeholder-val="{{ true }}">
+          <button onclick="{{ switchToManager }}" title="สลับมุมมองเป็นผู้อนุมัติ (บัญชีเดิม)" style="position:relative;width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--color-divider);cursor:pointer;color:var(--color-text)">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"></path><path d="M3 6h18"></path><path d="m7 22-4-4 4-4"></path><path d="M21 18H3"></path></svg>
+            <sc-if value="{{ hasMgrPending }}" hint-placeholder-val="{{ false }}">
+              <span style="position:absolute;top:-7px;right:-7px;min-width:18px;height:18px;padding:0 4px;background:var(--color-accent);color:#fff;font-family:var(--font-heading);font-weight:800;font-size:10px;display:flex;align-items:center;justify-content:center">{{ mgrPendingDocs.length }}</span>
+            </sc-if>
+          </button>
+          </sc-if>
+          <button onclick="{{ signOut }}" title="ออกจากระบบ" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--color-divider);cursor:pointer;color:var(--color-text)">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+          </button>
+        </div>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:18px var(--space-4) 20px;display:flex;flex-direction:column;gap:18px">
+        <button class="btn btn-primary btn-block" onclick="{{ goCreate }}" style="justify-content:center;font-size:16px;padding:14px">＋ สร้างเอกสารใหม่</button>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div onclick="{{ togglePendingFilter }}" style="{{ pendingCardStyle }}">
+            <div style="font-family:var(--font-heading);font-size:26px;font-weight:800">{{ pendingCount }}</div>
+            <div style="font-size:12px;opacity:.6;margin-top:2px">รออนุมัติ</div>
+          </div>
+          <div onclick="{{ toggleCorrectionFilter }}" style="{{ correctionCardStyle }}">
+            <div style="font-family:var(--font-heading);font-size:26px;font-weight:800;color:var(--color-accent-700)">{{ correctionCount }}</div>
+            <div style="font-size:12px;opacity:.75;margin-top:2px;color:var(--color-accent-700)">ต้องแก้ไข</div>
+          </div>
+        </div>
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <h3 style="margin:0;font-size:14px">เอกสารล่าสุด</h3>
+            <span style="font-size:12px;opacity:.5">{{ myDocs.length }} รายการ</span>
+          </div>
+          <sc-if value="{{ hasMyDocs }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <sc-for list="{{ myDocs }}" as="doc" hint-placeholder-count="3">
+              <div onclick="{{ doc.open }}" style="border:1px solid var(--color-divider);padding:12px;cursor:pointer">
+                <div style="display:flex;justify-content:space-between;gap:8px">
+                  <div>
+                    <div style="font-family:var(--font-heading);font-weight:800;font-size:14px">{{ doc.typeLabel }}</div>
+                    <div style="font-size:11px;opacity:.55;margin-top:2px">{{ doc.docNo }} · {{ doc.date }}</div>
+                  </div>
+                  <div style="font-family:var(--font-heading);font-weight:800;font-size:15px;text-align:right">฿{{ doc.amount }}</div>
+                </div>
+                <div style="margin-top:10px;display:flex;align-items:center;gap:8px">
+                  <div style="display:inline-flex;align-items:center;font-size:11px;font-weight:800;padding:4px 8px;border:1px solid;{{ doc.statusStyle }}">{{ doc.statusLabel }}</div>
+                  {{ doc.statusIcon }}
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          </sc-if>
+          <sc-if value="{{ noMyDocs }}" hint-placeholder-val="{{ false }}">
+            <div style="border:1px dashed var(--color-divider);padding:28px 16px;text-align:center">
+              <p style="margin:0;font-size:13px;opacity:.6">ยังไม่มีเอกสาร<br>เริ่มสร้างเอกสารแรกของคุณ</p>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+      <div style="flex-shrink:0;border-top:2px solid var(--color-divider);display:flex">
+        <div onclick="{{ goDashboard }}" style="flex:1;padding:10px 4px 12px;text-align:center;cursor:pointer;color:var(--color-text)">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+          <div style="font-size:10px;margin-top:3px;font-weight:800">หน้าหลัก</div>
+        </div>
+        <div onclick="{{ goCreate }}" style="flex:1;padding:10px 4px 12px;text-align:center;cursor:pointer;color:var(--color-text)">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>
+          <div style="font-size:10px;margin-top:3px">สร้างเอกสาร</div>
+        </div>
+        <div onclick="{{ notImplemented }}" style="flex:1;padding:10px 4px 12px;text-align:center;cursor:pointer;color:var(--color-neutral-500)">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+          <div style="font-size:10px;margin-top:3px">เอกสารของฉัน</div>
+        </div>
+        <div onclick="{{ notImplemented }}" style="flex:1;padding:10px 4px 12px;text-align:center;cursor:pointer;color:var(--color-neutral-500)">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>
+          <div style="font-size:10px;margin-top:3px">แจ้งเตือน</div>
+        </div>
+        <div onclick="{{ notImplemented }}" style="flex:1;padding:10px 4px 12px;text-align:center;cursor:pointer;color:var(--color-neutral-500)">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          <div style="font-size:10px;margin-top:3px">โปรไฟล์</div>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isCreate }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;height:100%">
+      <div style="display:flex;align-items:center;gap:12px;padding:18px var(--space-4) 14px;border-bottom:2px solid var(--color-divider)">
+        <button onclick="{{ goDashboard }}" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--color-divider);cursor:pointer;color:var(--color-text)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg></button>
+        <h2 style="font-family:var(--font-heading);font-weight:800;font-size:17px;margin:0;flex:1;text-align:center">สร้างเอกสารใหม่</h2>
+        <div style="width:36px;flex-shrink:0"></div>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:20px var(--space-4) 24px">
+        <p style="font-size:15px;font-weight:800;font-family:var(--font-heading);margin:0 0 16px">รายการค่าใช้จ่ายนี้เกี่ยวกับอะไร?</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <sc-for list="{{ expenseTypes }}" as="t" hint-placeholder-count="8">
+            <div onclick="{{ t.select }}" style="border:1px solid var(--color-divider);padding:16px 10px;display:flex;flex-direction:column;align-items:flex-start;gap:10px;cursor:pointer">
+              <div style="width:34px;height:34px;background:var(--color-neutral-200);display:flex;align-items:center;justify-content:center">{{ t.icon }}</div>
+              <div style="font-size:13px;font-weight:600">{{ t.label }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isUpload }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;height:100%">
+      <div style="display:flex;align-items:center;gap:12px;padding:18px var(--space-4) 14px;border-bottom:2px solid var(--color-divider)">
+        <button onclick="{{ goCreate }}" style="width:36px;height:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--color-divider);cursor:pointer;color:var(--color-text)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg></button>
+        <h2 style="font-family:var(--font-heading);font-weight:800;font-size:17px;margin:0;flex:1;text-align:center">อัปโหลดข้อมูล</h2>
+        <div style="width:36px;flex-shrink:0"></div>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:20px var(--space-4) 24px;display:flex;flex-direction:column;gap:14px">
+        <sc-if value="{{ isRouteType }}" hint-placeholder-val="{{ false }}">
+          
+        </sc-if>
+        <sc-if value="{{ uploadError }}" hint-placeholder-val="{{ false }}">
+          <div style="border:1px solid var(--color-accent-500);background:var(--color-accent-100);padding:12px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+            <span style="font-size:12px;color:var(--color-accent-700)">อัปโหลดล้มเหลว กรุณาลองใหม่อีกครั้ง</span>
+            <button onclick="{{ dismissUploadError }}" style="border:none;background:transparent;color:var(--color-accent-700);cursor:pointer;font-size:12px;font-weight:800">ปิด</button>
+          </div>
+        </sc-if>
+        <div style="position:relative">
+          <div onclick="{{ toggleUploadMenu }}" style="border:1px dashed var(--color-divider);padding:26px 14px;display:flex;flex-direction:column;align-items:center;gap:10px;cursor:pointer">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path><circle cx="12" cy="13" r="3"></circle></svg>
+            <div style="font-size:13px;font-weight:800">ถ่ายภาพหรืออัปโหลดไฟล์</div>
+            <div style="font-size:11px;opacity:.55">รองรับ JPG, PNG, PDF</div>
+          </div>
+          <sc-if value="{{ showUploadMenu }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;left:0;right:0;top:calc(100% + 4px);background:#fff;border:1px solid var(--color-divider);box-shadow:var(--shadow-md);z-index:10">
+              <div onclick="{{ pickCamera }}" style="padding:12px;font-size:13px;font-weight:600;cursor:pointer;border-bottom:1px solid var(--color-divider)">ถ่ายภาพ</div>
+              <div onclick="{{ pickFile }}" style="padding:12px;font-size:13px;font-weight:600;cursor:pointer">อัปโหลดไฟล์</div>
+            </div>
+          </sc-if>
+        </div>
+        <input type="file" ref="{{ fileInputRef }}" onchange="{{ onFilesSelected }}" multiple="{{ true }}" accept="image/*,application/pdf" style="display:none">
+        <sc-if value="{{ hasFiles }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <div style="font-size:12px;opacity:.55;margin-bottom:8px">เอกสารที่แนบแล้ว ({{ files.length }})</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <sc-for list="{{ files }}" as="f" hint-placeholder-count="0">
+              <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--color-divider);padding:8px">
+                {{ f.thumb }}
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.name }}</div>
+                  <div style="font-size:10px;opacity:.5">อัปโหลดสำเร็จ</div>
+                </div>
+                <button onclick="{{ f.remove }}" style="border:none;background:transparent;cursor:pointer;color:var(--color-text);opacity:.5;padding:4px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        </sc-if>
+      </div>
+      <div style="flex-shrink:0;padding:14px var(--space-4);border-top:2px solid var(--color-divider)">
+        <button class="btn btn-primary btn-block" disabled="{{ uploadDisabled }}" onclick="{{ startExtraction }}" style="justify-content:center;box-sizing:border-box;border:1px solid transparent">{{ extractLabel }}</button>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isOcr }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;height:100%">
+      <div style="display:flex;align-items:center;gap:12px;padding:18px var(--space-4) 14px;border-bottom:2px solid var(--color-divider)">
+        <button onclick="{{ goUpload }}" style="width:36px;height:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--color-divider);cursor:pointer;color:var(--color-text)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg></button>
+        <h2 style="font-family:var(--font-heading);font-weight:800;font-size:17px;margin:0;flex:1;text-align:center">ตรวจสอบข้อมูล</h2>
+        <div style="width:36px;flex-shrink:0"></div>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:18px var(--space-4) 24px;display:flex;flex-direction:column;gap:12px">
+        <p style="margin:0;font-size:12px;line-height:1.6;opacity:.7">กรุณาตรวจสอบข้อมูลให้ถูกต้องก่อนดำเนินการต่อ</p>
+        <sc-for list="{{ items }}" as="item" hint-placeholder-count="0">
+          <div style="border:1px solid var(--color-divider);padding:12px;display:flex;flex-direction:column;gap:9px">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+              <div style="font-size:11px;font-weight:800;letter-spacing:.03em;text-transform:uppercase">{{ item.typeLabel }}</div>
+              <button onclick="{{ item.remove }}" style="border:none;background:transparent;cursor:pointer;color:var(--color-accent-700);padding:4px">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path></svg>
+              </button>
+            </div>
+            {{ item.attachment }}
+            <div style="display:flex;flex-direction:column;gap:4px;font-size:13px">
+              <span style="opacity:.6">วันที่</span>
+              <input class="input" type="date" value="{{ item.date }}" onchange="{{ item.onDate }}" style="{{ item.blockInputStyle }}">
+            </div>
+            <sc-if value="{{ item.hasRoute }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:4px;font-size:13px">
+                <span style="opacity:.6">ต้นทาง</span>
+                <input class="input" value="{{ item.origin }}" onchange="{{ item.onOrigin }}" style="{{ item.blockInputStyle }}">
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px;font-size:13px">
+                <span style="opacity:.6">ปลายทาง</span>
+                <input class="input" value="{{ item.destination }}" onchange="{{ item.onDestination }}" style="{{ item.blockInputStyle }}">
+              </div>
+            </sc-if>
+            <sc-if value="{{ item.isPersonal }}" hint-placeholder-val="{{ false }}">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px">
+                <div style="display:flex;flex-direction:column;gap:4px">
+                  <span style="opacity:.6">อัตรา (บาท/กม.)</span>
+                  <input class="input" value="{{ item.ratePerKm }}" onchange="{{ item.onRate }}" style="{{ item.blockInputStyle }}">
+                </div>
+                <div style="display:flex;flex-direction:column;gap:4px">
+                  <span style="opacity:.6">ระยะทาง (กม.)</span>
+                  <input class="input" value="{{ item.distance }}" onchange="{{ item.onDistance }}" style="{{ item.blockInputStyle }}">
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px;font-size:13px">
+                <span style="opacity:.6">จำนวนเงิน (บาท)</span>
+                <input class="input" value="{{ item.amount }}" readOnly="{{ true }}" style="{{ item.blockReadonlyStyle }}">
+              </div>
+            </sc-if>
+            <sc-if value="{{ item.isToll }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:4px;font-size:13px">
+                <span style="opacity:.6">ค่าผ่านทางพิเศษ จำนวนเงิน (บาท)</span>
+                <input class="input" value="{{ item.amount }}" onchange="{{ item.onAmount }}" onblur="{{ item.onAmountBlur }}" style="{{ item.blockInputStyle }}">
+              </div>
+            </sc-if>
+            <sc-if value="{{ item.isPublic }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:4px;font-size:13px">
+                <span style="opacity:.6">จำนวนเงิน (บาท)</span>
+                <input class="input" value="{{ item.amount }}" onchange="{{ item.onAmount }}" onblur="{{ item.onAmountBlur }}" style="{{ item.blockInputStyle }}">
+              </div>
+            </sc-if>
+            <sc-if value="{{ item.hasRoute }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:4px;font-size:13px">
+                <span style="opacity:.6">เหตุผล</span>
+                <input class="input" value="{{ item.purpose }}" onchange="{{ item.onPurpose }}" style="{{ item.blockInputStyle }}">
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+        <div style="position:relative">
+          <button onclick="{{ toggleAddMenu }}" style="width:100%;border:1px dashed var(--color-divider);background:transparent;padding:10px;font-size:12px;font-weight:700;cursor:pointer;color:var(--color-text);display:flex;align-items:center;justify-content:center;gap:6px">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>
+            เพิ่มรายการ
+          </button>
+          <sc-if value="{{ showAddMenu }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;left:0;right:0;bottom:calc(100% + 4px);background:#fff;border:1px solid var(--color-divider);box-shadow:var(--shadow-md);z-index:10">
+              <sc-for list="{{ travelSubTypes }}" as="t" hint-placeholder-count="3">
+                <div onclick="{{ t.addSelect }}" style="padding:12px;font-size:13px;font-weight:600;cursor:pointer;border-bottom:1px solid var(--color-divider)">{{ t.label }}</div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+      <div style="flex-shrink:0;padding:14px var(--space-4);border-top:2px solid var(--color-divider);display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:baseline;justify-content:space-between">
+          <span style="font-size:13px;font-weight:700">ยอดรวมทั้งหมด</span>
+          <span style="font-family:var(--font-heading);font-weight:800;font-size:24px;color:var(--color-accent-700)">฿{{ totalAmount }}</span>
+        </div>
+        <button class="btn btn-primary btn-block" disabled="{{ ocrConfirmDisabled }}" onclick="{{ goDetailsFromOcr }}" style="justify-content:center;box-sizing:border-box;border:1px solid transparent">ยืนยัน</button>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isPreview }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;height:100%">
+      <div style="display:flex;align-items:center;gap:12px;padding:18px var(--space-4) 14px;border-bottom:2px solid var(--color-divider)">
+        <button onclick="{{ goSignFromPreview }}" style="width:36px;height:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--color-divider);cursor:pointer;color:var(--color-text)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg></button>
+        <h2 style="font-family:var(--font-heading);font-weight:800;font-size:17px;margin:0;flex:1;text-align:center">ตัวอย่างเอกสาร</h2>
+        <div style="width:36px;flex-shrink:0"></div>
+      </div>
+      <div style="flex-shrink:0;display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:10px var(--space-4);border-bottom:1px solid var(--color-divider);background:#fff">
+        <div onclick="{{ toggleCertForm }}" style="display:flex;align-items:center;gap:6px;margin-right:auto;cursor:pointer">
+          <div style="{{ certBoxStyle }}">{{ certMark }}</div>
+          <span style="font-size:11px;opacity:.7">ใบรับรองแทนใบเสร็จรับเงิน</span>
+        </div>
+        <span style="font-size:11px;opacity:.6">Print Layout</span>
+        <div onclick="{{ toggleA4 }}" style="{{ a4TrackStyle }}"><div style="{{ a4KnobStyle }}"></div></div>
+      </div>
+      <div ref="{{ previewScrollRef }}" onpointerdown="{{ panDown }}" onpointermove="{{ panMove }}" onpointerup="{{ panUp }}" onpointerleave="{{ panUp }}" ontouchstart="{{ touchStart }}" ontouchmove="{{ touchMove }}" ontouchend="{{ touchEnd }}" style="{{ previewScrollStyle }}">
+        <div style="{{ docSheetWrapStyle }}">
+        <div style="{{ docPagesStyle }}">
+        <sc-if value="{{ showCertPage }}" hint-placeholder-val="{{ false }}">
+        <sc-for list="{{ certPages }}" as="cpage" hint-placeholder-count="0">
+        <div style="{{ cpage.pageStyle }}">
+        <div style="{{ cpage.clipStyle }}">
+        <div ref="{{ cpage.contentRef }}" style="{{ cpage.contentStyle }}">
+          <img data-cbrk="1" src="uploads/pasted-1785686843872-0.png" alt="Asset Five" style="width:215px;display:block;margin:8px auto 0">
+          <div data-cbrk="1" style="text-align:center;margin-top:30px">
+            <div style="font-size:13px;line-height:1.55">บริษัท แอสเซท ไฟว์ ดีเวลลอปเม้นท์ จำกัด เลขที่ 199 อาคาร เอส โอเอซิส ชั้น 12 ห้องเลขที่ 1210, 1211, 1212 ถนนวิภาวดีรังสิต แขวงจอมพล เขตจตุจักร กรุงเทพมหานคร 10900</div>
+            <div style="font-size:12.5px;line-height:1.55;margin-top:4px">Asset Five Development Co., Ltd.  199 S-OASIS Building, 12th Floor, Unit 1210, 1211, 1212, Vibhavadi-Rangsit Rd., Chomphol, Chatuchak, Bangkok 10900</div>
+            <div style="font-size:13px;margin-top:4px">เลขประจำตัวผู้เสียภาษี 010555614282</div>
+          </div>
+          <div data-cbrk="1" style="text-align:center;font-size:16px;font-weight:700;margin:24px 0 26px">ใบรับรองแทนใบเสร็จรับเงิน</div>
+          <table data-cbrk="1" style="width:100%;border-collapse:collapse;font-size:15px;table-layout:fixed">
+            <thead>
+              <tr style="background:#d9d9d9">
+                <th style="border:1px solid #000;padding:5px;width:7.4%;font-weight:700">ลำดับ</th>
+                <th style="border:1px solid #000;padding:5px;width:15.4%;font-weight:700">วัน เดือน ปี</th>
+                <th style="border:1px solid #000;padding:5px;width:45.3%;font-weight:700">รายละเอียดการจ่าย</th>
+                <th style="border:1px solid #000;padding:5px;width:13.4%;font-weight:700">จำนวนเงิน</th>
+                <th style="border:1px solid #000;padding:5px;width:18.5%;font-weight:700">หมายเหตุ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <sc-for list="{{ certRows }}" as="row" hint-placeholder-count="0">
+                <tr>
+                  <td style="border:1px solid #000;padding:4px 6px;text-align:center;height:32px">{{ row.no }}</td>
+                  <td style="border:1px solid #000;padding:4px 6px;text-align:center">{{ row.date }}</td>
+                  <td style="border:1px solid #000;padding:4px 6px">{{ row.detail }}</td>
+                  <td style="border:1px solid #000;padding:4px 6px;text-align:right">{{ row.amount }}</td>
+                  <td style="border:1px solid #000;padding:4px 6px">{{ row.note }}</td>
+                </tr>
+              </sc-for>
+              <sc-for list="{{ certBlankRows }}" as="blank" hint-placeholder-count="0">
+                <tr>
+                  <td style="border:1px solid #000;height:32px"></td>
+                  <td style="border:1px solid #000"></td>
+                  <td style="border:1px solid #000"></td>
+                  <td style="border:1px solid #000"></td>
+                  <td style="border:1px solid #000"></td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+          <div data-cbrk="1" style="display:flex;align-items:stretch;font-size:15px">
+            <div style="width:68.1%;background:#d9d9d9;border:1px solid #000;border-top:none;height:30px;display:flex;align-items:center;justify-content:center">{{ amountWords }}</div>
+            <div style="width:13.4%;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;font-weight:700">รวมทั้งสิ้น</div>
+            <div style="width:18.5%;background:#d9d9d9;border:1px solid #000;border-top:none;height:30px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px">{{ totalAmount }}</div>
+          </div>
+          <div data-cbrk="1" style="font-size:13px;margin-top:28px">
+            <div style="display:flex;align-items:flex-end;gap:8px">
+              <span style="padding-left:100px">ข้าพเจ้า</span>
+              <span style="flex:1;border-bottom:1px dotted #000;text-align:center">{{ employee.name }}</span>
+              <span>ตำแหน่ง</span>
+              <span style="flex:1;border-bottom:1px dotted #000;text-align:center">{{ employee.position }}</span>
+            </div>
+            <div style="margin-top:16px;line-height:1.7">ขอรับรองว่า รายจ่ายข้างต้นนี้ไม่อาจเรียกเก็บใบเสร็จรับเงินจากผู้รับเงินได้ และข้าพเจ้าได้จ่ายไปในงานของบริษัท แอสเซท ไฟว์ ดีเวลลอปเม้นท์ จำกัด  โดยแท้</div>
+            <div style="display:flex;align-items:flex-end;gap:8px;margin-top:14px">
+              <span>ตั้งแต่วันที่</span>
+              <span style="width:170px;border-bottom:1px dotted #000;text-align:center">{{ certFrom }}</span>
+              <span>ถึงวันที่</span>
+              <span style="width:190px;border-bottom:1px dotted #000;text-align:center">{{ certTo }}</span>
+            </div>
+          </div>
+          <div data-cbrk="1" style="margin-top:auto;font-size:13px;padding-bottom:2px">
+            <div style="display:flex;align-items:flex-end;gap:8px;justify-content:flex-end">
+              <span>ลงชื่อ</span>
+              <span style="width:203px;border-bottom:1px dashed #000;text-align:center;display:flex;align-items:flex-end;justify-content:center;height:46px">{{ signatureImg }}</span>
+              <span style="width:80px">(ผู้เบิกจ่าย)</span>
+            </div>
+            <div style="display:flex;justify-content:flex-end;margin-top:3px">
+              <span style="width:203px;text-align:center">( {{ employee.name }} )</span>
+              <span style="width:88px"></span>
+            </div>
+            <div style="display:flex;align-items:flex-end;gap:8px;justify-content:flex-end;margin-top:15px">
+              <span>ลงชื่อ</span>
+              <span style="width:203px;border-bottom:1px dashed #000;text-align:center">&nbsp;</span>
+              <span style="width:80px">(ผู้อนุมัติ)</span>
+            </div>
+            <div style="display:flex;justify-content:flex-end;margin-top:3px">
+              <span style="width:203px;text-align:center">( {{ employee.manager }} )</span>
+              <span style="width:88px"></span>
+            </div>
+          </div>
+
+        </div>
+        </div>
+        </div>
+        </sc-for>
+        </sc-if>
+        <sc-for list="{{ a4Pages }}" as="page" hint-placeholder-count="1">
+        <div style="{{ page.pageStyle }}">
+        <div style="{{ page.clipStyle }}">
+        <div ref="{{ page.contentRef }}" style="{{ page.contentStyle }}">
+          <div data-brk="1" style="border-bottom:2px solid var(--color-divider);padding-bottom:12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;{{ docHeaderExtra }}">
+            <div>
+              <div style="font-family:var(--font-heading);font-weight:800;font-size:14px">บริษัท แอสเซท ไฟว์ ดีเวลลอปเม้นท์ จำกัด</div>
+              <div style="font-family:var(--font-heading);font-weight:800;font-size:11px;opacity:.6;margin-top:2px">Asset Five Development Co., Ltd.</div>
+            </div>
+            <div style="{{ docNumBlockStyle }}">
+              <div style="font-size:10px;opacity:.55">เลขที่เอกสาร</div>
+              <div style="font-family:var(--font-heading);font-weight:800;font-size:13px">{{ docNumber }}</div>
+            </div>
+          </div>
+          <h3 data-brk="1" style="margin:0 0 14px;font-size:18px;text-align:center">เอกสารแสดงรายละเอียดค่าเดินทาง</h3>
+          <div data-brk="1" style="display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;font-size:12px;margin-bottom:14px">
+            <div><span style="opacity:.5">ผู้ขอเบิก</span><br><b>{{ employee.name }}</b></div>
+            <div><span style="opacity:.5">ตำแหน่ง</span><br><b>{{ employee.position }}</b></div>
+            <div><span style="opacity:.5">รหัสพนักงาน</span><br><b>{{ employee.id }}</b></div>
+            <div><span style="opacity:.5">วันที่</span><br><b>{{ form.date }}</b></div>
+          </div>
+          
+          <div data-brk="1" style="border:1px solid var(--color-divider);padding:12px;margin-bottom:14px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline">
+              <span style="font-size:12px;opacity:.6">จำนวนเงินรวม</span>
+              <span style="font-family:var(--font-heading);font-weight:800;font-size:22px">฿{{ form.amount }}</span>
+            </div>
+            <div style="font-size:11px;opacity:.55;margin-top:4px;text-align:right">({{ amountWords }})</div>
+          </div>
+          <div style="margin-bottom:14px">
+            <div data-brk="1" style="font-size:11px;opacity:.5;margin-bottom:6px">รายละเอียด</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <sc-for list="{{ previewItems }}" as="item" hint-placeholder-count="0">
+                <div data-brk="1" style="{{ previewRowStyle }}">
+                  <div style="{{ previewAttachStyle }}">{{ item.attachment }}</div>
+                  <div style="{{ previewTextStyle }}">
+                    <div style="font-weight:800;text-transform:uppercase;letter-spacing:.03em">{{ item.typeLabel }}</div>
+                    <div><span style="opacity:.5">วันที่</span> {{ item.dateDisplay }}</div>
+                    <sc-if value="{{ item.hasRoute }}" hint-placeholder-val="{{ false }}">
+                      <div><span style="opacity:.5">ต้นทาง</span> {{ item.origin }}</div>
+                      <div><span style="opacity:.5">ปลายทาง</span> {{ item.destination }}</div>
+                    </sc-if>
+                    <sc-if value="{{ item.isPersonal }}" hint-placeholder-val="{{ false }}">
+                      <div><span style="opacity:.5">อัตรา</span> {{ item.ratePerKm }} บาท/กม. · <span style="opacity:.5">ระยะทาง</span> {{ item.distance }} กม.</div>
+                    </sc-if>
+                    <sc-if value="{{ item.hasRoute }}" hint-placeholder-val="{{ false }}">
+                      <div><span style="opacity:.5">เหตุผล</span> {{ item.purpose }}</div>
+                    </sc-if>
+                    <div style="font-weight:800">฿{{ item.amount }}</div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <sc-if value="{{ showDocSignature }}" hint-placeholder-val="{{ true }}">
+            <div data-brk="1" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px">
+              <div style="border-top:1px solid var(--color-divider);padding-top:6px">
+                <div style="font-size:10px;opacity:.5">ผู้จัดทำ</div>
+                <sc-if value="{{ hasSignature }}" hint-placeholder-val="{{ false }}">
+                  {{ signatureImg }}
+                  <div style="font-size:10px;margin-top:2px">{{ employee.name }}</div>
+                  <div style="font-size:9px;opacity:.5">{{ signedAt }}</div>
+                </sc-if>
+                <sc-if value="{{ noSignature }}" hint-placeholder-val="{{ true }}">
+                  <div style="font-size:11px;font-style:italic;opacity:.5;margin-top:4px">ยังไม่ได้ลงลายเซ็น</div>
+                </sc-if>
+              </div>
+              <div style="border-top:1px solid var(--color-divider);padding-top:6px">
+                <div style="font-size:10px;opacity:.5">ผู้ตรวจสอบ/ผู้อนุมัติ</div>
+                <div style="font-size:11px;font-style:italic;opacity:.5;margin-top:4px">รอการอนุมัติ</div>
+              </div>
+            </div>
+          </sc-if>
+
+        </div>
+        </div>
+        </div>
+        </sc-for>
+        </div>
+        </div>
+      </div>
+      <div style="flex-shrink:0;padding:14px var(--space-4);border-top:2px solid var(--color-divider);display:flex;flex-direction:column;gap:10px">
+        <sc-if value="{{ a4Mode }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;justify-content:center;gap:8px">
+            <button onclick="{{ zoomOut }}" style="width:32px;height:32px;border:1px solid var(--color-divider);background:transparent;cursor:pointer;font-size:16px;font-weight:800;color:var(--color-text);display:flex;align-items:center;justify-content:center">−</button>
+            <span style="font-size:12px;opacity:.6;min-width:44px;text-align:center">{{ a4ZoomLabel }}</span>
+            <button onclick="{{ zoomIn }}" style="width:32px;height:32px;border:1px solid var(--color-divider);background:transparent;cursor:pointer;font-size:16px;font-weight:800;color:var(--color-text);display:flex;align-items:center;justify-content:center">+</button>
+          </div>
+        </sc-if>
+        <button class="btn btn-primary btn-block" onclick="{{ askSubmitConfirm }}" style="justify-content:center;box-sizing:border-box;border:1px solid transparent">ส่งอนุมัติ</button>
+      </div>
+      <sc-if value="{{ showSubmitConfirm }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;background:color-mix(in srgb, #000 45%, transparent);display:flex;align-items:flex-end;z-index:25">
+          <div style="background:#fff;width:100%;border-top:2px solid var(--color-divider);padding:18px;display:flex;flex-direction:column;gap:14px">
+            <h3 style="margin:0;font-size:16px">ยืนยันการทำรายการหรือไม่</h3>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-secondary" onclick="{{ cancelSubmitConfirm }}" style="flex:1;justify-content:center;box-sizing:border-box">ยกเลิก</button>
+              <button class="btn btn-primary" onclick="{{ confirmEmployeeSignature }}" style="flex:1;justify-content:center;box-sizing:border-box;border:1px solid transparent">ยืนยัน</button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isSign }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;height:100%;position:relative">
+      <div style="display:flex;align-items:center;gap:12px;padding:18px var(--space-4) 14px;border-bottom:2px solid var(--color-divider)">
+        <button onclick="{{ goOcr }}" style="width:36px;height:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--color-divider);cursor:pointer;color:var(--color-text)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg></button>
+        <h2 style="font-family:var(--font-heading);font-weight:800;font-size:17px;margin:0;flex:1;text-align:center">ลงลายเซ็นดิจิทัล</h2>
+        <div style="width:36px;flex-shrink:0"></div>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:18px var(--space-4) 24px;display:flex;flex-direction:column;gap:14px">
+        <div style="border:1px solid var(--color-divider);padding:12px;font-size:12px;display:flex;flex-direction:column;gap:4px">
+          <div style="display:flex;justify-content:space-between"><span style="opacity:.5">ชื่อ</span><b>{{ employee.name }}</b></div>
+          <div style="display:flex;justify-content:space-between"><span style="opacity:.5">อีเมล</span><b>{{ employee.email }}</b></div>
+          <div style="display:flex;justify-content:space-between"><span style="opacity:.5">จำนวนเงิน</span><b>฿{{ form.amount }}</b></div>
+        </div>
+        <div>
+          <div style="font-size:11px;opacity:.55;margin-bottom:8px">ลงลายเซ็นด้านล่าง</div>
+          <canvas ref="{{ empCanvasRefTpl }}" width="326" height="150" onpointerdown="{{ empDown }}" onpointermove="{{ empMove }}" onpointerup="{{ empUp }}" onpointerleave="{{ empUp }}" style="width:100%;height:150px;border:1px solid var(--color-divider);touch-action:none;background:#fff"></canvas>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn btn-secondary" onclick="{{ clearEmpSignature }}" style="flex:1;justify-content:center;font-size:12px">ล้างลายเซ็น</button>
+            <button class="btn btn-secondary" onclick="{{ useSampleSignatureUpload }}" style="flex:1;justify-content:center;font-size:12px">อัปโหลดลายเซ็น</button>
+          </div>
+        </div>
+      </div>
+      <div style="flex-shrink:0;padding:14px var(--space-4);border-top:2px solid var(--color-divider)">
+        <button class="btn btn-primary btn-block" disabled="{{ signDisabled }}" onclick="{{ goPreviewAfterSign }}" style="justify-content:center;box-sizing:border-box;border:1px solid transparent">ยืนยัน</button>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isSuccess }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 28px;gap:16px;text-align:center">
+      <img src="uploads/pasted-1785758960229-0.png" alt="สำเร็จ" style="width:170px;height:auto;display:block">
+      <h2 style="margin:0;font-size:20px">ส่งเอกสารสำเร็จ</h2>
+      <div style="display:flex;flex-direction:column;gap:8px;width:100%;margin-top:20px">
+        <button class="btn btn-primary btn-block" onclick="{{ backToDashboardReset }}" style="justify-content:center;box-sizing:border-box;border:1px solid transparent">กลับหน้าหลัก</button>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isManagerDash }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;height:100%">
+      <div style="padding:22px var(--space-4) 16px;border-bottom:2px solid var(--color-divider);display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div>
+          <h2 style="margin:0;font-size:22px">{{ account.name }}</h2>
+          <p style="margin:6px 0 0;font-size:12px;opacity:.6">{{ account.position }} · มุมมองผู้อนุมัติ</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0">
+          <sc-if value="{{ canSwitchRole }}" hint-placeholder-val="{{ true }}">
+          <button onclick="{{ switchToEmployee }}" title="สลับมุมมองเป็นผู้จัดทำ (บัญชีเดิม)" style="position:relative;width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--color-divider);cursor:pointer;color:var(--color-text)">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"></path><path d="M3 6h18"></path><path d="m7 22-4-4 4-4"></path><path d="M21 18H3"></path></svg>
+            <sc-if value="{{ hasCorrections }}" hint-placeholder-val="{{ false }}">
+              <span style="position:absolute;top:-7px;right:-7px;min-width:18px;height:18px;padding:0 4px;background:var(--color-accent);color:#fff;font-family:var(--font-heading);font-weight:800;font-size:10px;display:flex;align-items:center;justify-content:center">{{ correctionCount }}</span>
+            </sc-if>
+          </button>
+          </sc-if>
+          <button onclick="{{ signOut }}" title="ออกจากระบบ" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--color-divider);cursor:pointer;color:var(--color-text)">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+          </button>
+        </div>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:18px var(--space-4) 20px;display:flex;flex-direction:column;gap:14px">
+
+        <div style="border:2px solid var(--color-accent);background:var(--color-accent);color:#fff;display:flex;align-items:stretch">
+          <div onclick="{{ scrollToPending }}" style="flex:1;min-width:0;padding:13px 14px;cursor:pointer;display:flex;align-items:center;gap:12px">
+            <div style="font-family:var(--font-heading);font-size:38px;font-weight:800;line-height:.85;letter-spacing:-.03em">{{ mgrPendingCount }}</div>
+            <div style="min-width:0">
+              <div style="font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase">รออนุมัติ</div>
+              <div style="font-size:10.5px;opacity:.85;margin-top:2px">{{ pendingAgeLabel }}</div>
+            </div>
+          </div>
+          <button onclick="{{ approveAllSoon }}" title="อนุมัติทั้งหมด" style="width:52px;flex-shrink:0;border:none;border-left:1px solid color-mix(in srgb, #fff 35%, transparent);background:transparent;color:#fff;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h8l-1 8 10-12h-8l1-8z"></path></svg>
+          </button>
+        </div>
+
+        <div style="border:1px solid var(--color-divider);background:#fff">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 14px;border-bottom:1px solid var(--color-divider)">
+            <div style="font-size:9.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;opacity:.5">ล่าสุด</div>
+            <div style="display:flex;align-items:center;gap:4px">
+              <button onclick="{{ prevMonth }}" style="width:24px;height:24px;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--color-divider);cursor:pointer;color:var(--color-text)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg></button>
+              <span style="font-size:11.5px;font-weight:800;min-width:86px;text-align:center">{{ monthLabel }}</span>
+              <button onclick="{{ nextMonth }}" disabled="{{ nextMonthDisabled }}" style="width:24px;height:24px;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--color-divider);cursor:pointer;color:var(--color-text)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg></button>
+            </div>
+          </div>
+          <div style="padding:14px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px">
+            <div>
+              <div style="font-family:var(--font-heading);font-size:26px;font-weight:800;line-height:1.05">฿{{ monthTotal }}</div>
+              <div style="font-size:10.5px;opacity:.55;margin-top:4px">{{ monthCount }} รายการ · เฉลี่ย ฿{{ monthAverage }}</div>
+            </div>
+            <div style="display:flex;align-items:flex-end;gap:5px;height:42px">
+              <sc-for list="{{ monthTrend }}" as="m" hint-placeholder-count="6">
+                <div onclick="{{ m.select }}" title="{{ m.label }}" style="width:15px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer">
+                  <div style="width:100%;{{ m.barStyle }}"></div>
+                  <span style="font-size:8.5px;letter-spacing:.02em;{{ m.labelStyle }}">{{ m.short }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <sc-if value="{{ hasMonthRows }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;border-top:1px solid var(--color-divider)">
+            <sc-for list="{{ monthRows }}" as="r" hint-placeholder-count="3">
+              <div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--color-neutral-200)">
+                <div style="flex:1;min-width:0;display:flex;align-items:baseline;gap:6px">
+                  <span style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.name }}</span>
+                  <span style="font-size:10px;opacity:.45;flex-shrink:0">{{ r.count }} รายการ</span>
+                </div>
+                <div style="font-family:var(--font-heading);font-weight:800;font-size:12.5px;flex-shrink:0">฿{{ r.amount }}</div>
+              </div>
+            </sc-for>
+          </div>
+          </sc-if>
+          <sc-if value="{{ noMonthRows }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:14px;font-size:11.5px;opacity:.5;border-top:1px solid var(--color-divider)">ยังไม่มีรายการที่อนุมัติในเดือนนี้</div>
+          </sc-if>
+        </div>
+        <div ref="{{ pendingListRef }}">
+          <h3 style="margin:0 0 10px;font-size:14px">รายการรออนุมัติ</h3>
+          <sc-if value="{{ hasMgrPending }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <sc-for list="{{ mgrPendingDocs }}" as="doc" hint-placeholder-count="3">
+              <div onclick="{{ doc.open }}" style="border:1px solid var(--color-divider);padding:12px;cursor:pointer">
+                <div style="display:flex;justify-content:space-between;gap:8px">
+                  <div>
+                    <div style="font-family:var(--font-heading);font-weight:800;font-size:14px">{{ doc.employeeName }}</div>
+                    <div style="font-size:11px;opacity:.55;margin-top:2px">{{ doc.employeePosition }} · {{ doc.typeLabel }}</div>
+                  </div>
+                  <div style="font-family:var(--font-heading);font-weight:800;font-size:15px;text-align:right">฿{{ doc.amount }}</div>
+                </div>
+                <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px;opacity:.55">
+                  <span>{{ doc.project }}</span><span>{{ doc.date }}</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          </sc-if>
+          <sc-if value="{{ noMgrPending }}" hint-placeholder-val="{{ false }}">
+            <div style="border:1px dashed var(--color-divider);padding:28px 16px;text-align:center">
+              <p style="margin:0;font-size:13px;opacity:.6">ไม่มีรายการรออนุมัติ</p>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+      <div style="flex-shrink:0;border-top:2px solid var(--color-divider);display:flex">
+        <div onclick="{{ goDashboard }}" style="flex:1;padding:10px 4px 12px;text-align:center;cursor:pointer;color:var(--color-text)">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+          <div style="font-size:10px;margin-top:3px;font-weight:800">หน้าหลัก</div>
+        </div>
+        <div onclick="{{ notImplemented }}" style="flex:1;padding:10px 4px 12px;text-align:center;cursor:pointer;color:var(--color-neutral-500)">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          <div style="font-size:10px;margin-top:3px">ประวัติ</div>
+        </div>
+        <div onclick="{{ notImplemented }}" style="flex:1;padding:10px 4px 12px;text-align:center;cursor:pointer;color:var(--color-neutral-500)">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>
+          <div style="font-size:10px;margin-top:3px">แจ้งเตือน</div>
+        </div>
+        <div onclick="{{ notImplemented }}" style="flex:1;padding:10px 4px 12px;text-align:center;cursor:pointer;color:var(--color-neutral-500)">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          <div style="font-size:10px;margin-top:3px">โปรไฟล์</div>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isManagerReview }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;height:100%;position:relative">
+      <div style="display:flex;align-items:center;gap:12px;padding:18px var(--space-4) 14px;border-bottom:2px solid var(--color-divider)">
+        <button onclick="{{ goDashboard }}" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--color-divider);cursor:pointer;color:var(--color-text)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg></button>
+        <h2 style="font-family:var(--font-heading);font-weight:800;font-size:15px;margin:0;flex:1;text-align:center">{{ activeDoc.docNo }}</h2>
+        <div style="width:36px;flex-shrink:0"></div>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:16px var(--space-4) 24px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+          <div style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;padding:4px 8px;border:1px solid;{{ activeDoc.statusStyle }}">{{ activeDoc.statusLabel }}</div>
+          <button class="btn btn-secondary" onclick="{{ openDocViewer }}" style="font-size:12px;padding:7px 12px">ดูเอกสาร</button>
+        </div>
+        <div style="border:1px solid var(--color-divider);padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;font-size:12px">
+          <div><span style="opacity:.5">ผู้ขอเบิก</span><br><b>{{ s_empName }}</b></div>
+          <div><span style="opacity:.5">ตำแหน่ง</span><br><b>{{ s_empPosition }}</b></div>
+          <div><span style="opacity:.5">รหัสพนักงาน</span><br><b>{{ s_empId }}</b></div>
+          <div><span style="opacity:.5">วันที่</span><br><b>{{ s_docDate }}</b></div>
+        </div>
+        <div style="border:1px solid var(--color-divider);padding:12px">
+          <div style="font-size:11px;opacity:.5;margin-bottom:8px">การลงนาม</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div style="border-top:1px solid var(--color-divider);padding-top:6px">
+              <div style="font-size:10px;opacity:.5">ผู้จัดทำ</div>
+              {{ s_signatureImg }}
+              <div style="font-size:10px;margin-top:2px">{{ s_empName }}</div>
+              <div style="font-size:9px;opacity:.5">{{ s_signedAt }}</div>
+            </div>
+            <div style="border-top:1px solid var(--color-divider);padding-top:6px">
+              <div style="font-size:10px;opacity:.5">ผู้ตรวจสอบ/ผู้อนุมัติ</div>
+              <sc-if value="{{ s_approverSigned }}" hint-placeholder-val="{{ false }}">
+                {{ s_approverImg }}
+                <div style="font-size:10px;margin-top:2px">{{ s_manager }}</div>
+                <div style="font-size:9px;opacity:.5">{{ s_approverSignedAt }}</div>
+              </sc-if>
+              <sc-if value="{{ s_approverPending }}" hint-placeholder-val="{{ true }}">
+                <div style="font-size:11px;font-style:italic;opacity:.5;margin-top:4px">{{ s_approverStatusText }}</div>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+        <sc-if value="{{ isOwnDocAsApprover }}" hint-placeholder-val="{{ false }}">
+          <div style="border:1px solid var(--color-divider);background:var(--color-neutral-100);padding:12px;font-size:12px;line-height:1.6">ไม่สามารถอนุมัติเอกสารของตนเองได้ · เอกสารนี้ต้องได้รับการอนุมัติจากผู้อนุมัติท่านอื่น</div>
+        </sc-if>
+        <sc-if value="{{ activeDocHasCorrection }}" hint-placeholder-val="{{ false }}">
+          <div style="border:1px solid var(--color-accent-400);background:var(--color-accent-100);padding:12px">
+            <div style="font-size:11px;font-weight:800;color:var(--color-accent-700);margin-bottom:4px">เหตุผลที่ขอให้แก้ไข</div>
+            <div style="font-size:12px;color:var(--color-accent-700)">{{ activeDoc.correctionReason }}</div>
+          </div>
+        </sc-if>
+        <div>
+          <div style="font-size:11px;opacity:.5;margin-bottom:6px">ประวัติการดำเนินการ</div>
+          <div style="display:flex;flex-direction:column;gap:0">
+            <sc-for list="{{ activeDoc.timeline }}" as="ev" hint-placeholder-count="3">
+              <div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--color-divider)">
+                <div style="width:6px;height:6px;background:var(--color-text);margin-top:6px;flex-shrink:0"></div>
+                <div style="flex:1">
+                  <div style="font-size:12px;font-weight:600">{{ ev.action }}</div>
+                  <div style="font-size:10px;opacity:.5">{{ ev.person }} · {{ ev.role }} · {{ ev.time }}</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <sc-if value="{{ showApprovalActions }}" hint-placeholder-val="{{ true }}">
+          <div class="field"><label>ความคิดเห็น (ถ้ามี)</label><textarea class="input" rows="2" onchange="{{ onManagerComment }}" style="font-family:var(--font-body);width:100%"></textarea></div>
+        </sc-if>
+      </div>
+      <sc-if value="{{ showEditCorrection }}" hint-placeholder-val="{{ false }}">
+      <div style="flex-shrink:0;padding:12px var(--space-4);border-top:2px solid var(--color-divider)">
+        <button class="btn btn-primary" onclick="{{ editCorrectionDoc }}" style="width:100%;justify-content:center;gap:8px;box-sizing:border-box;border:1px solid transparent"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>แก้ไขข้อมูล</button>
+      </div>
+      </sc-if>
+      <sc-if value="{{ showApprovalActions }}" hint-placeholder-val="{{ true }}">
+      <div style="flex-shrink:0;padding:12px var(--space-4);border-top:2px solid var(--color-divider);display:flex;gap:6px">
+        <button class="btn btn-secondary" onclick="{{ openCorrection }}" style="flex:1;justify-content:center;padding-left:4px;padding-right:4px;font-size:12px;border-color:var(--color-accent-500);background:var(--color-accent-100);color:var(--color-accent-700);box-sizing:border-box">ขอแก้ไข</button>
+        <button class="btn btn-secondary" onclick="{{ openReject }}" style="flex:1;justify-content:center;padding-left:4px;padding-right:4px;font-size:12px;border-color:var(--color-text);background:var(--color-text);color:#fff;box-sizing:border-box">ไม่อนุมัติ</button>
+        <button class="btn btn-primary" onclick="{{ openApprove }}" style="flex:1;justify-content:center;padding-left:4px;padding-right:4px;font-size:12px;box-sizing:border-box;border:1px solid transparent">อนุมัติ</button>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isDocViewer }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;background:#fff;z-index:30;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;gap:12px;padding:18px var(--space-4) 14px;border-bottom:2px solid var(--color-divider);flex-shrink:0">
+          <button onclick="{{ closeDocViewer }}" style="width:36px;height:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--color-divider);cursor:pointer;color:var(--color-text)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg></button>
+          <h2 style="font-family:var(--font-heading);font-weight:800;font-size:15px;margin:0;flex:1;text-align:center">{{ activeDoc.docNo }}</h2>
+          <div style="width:36px;flex-shrink:0"></div>
+        </div>
+      
+      
+      <div ref="{{ s_previewScrollRef }}" onpointerdown="{{ s_panDown }}" onpointermove="{{ s_panMove }}" onpointerup="{{ s_panUp }}" onpointerleave="{{ s_panUp }}" ontouchstart="{{ s_touchStart }}" ontouchmove="{{ s_touchMove }}" ontouchend="{{ s_touchEnd }}" style="{{ s_previewScrollStyle }}">
+        <div style="{{ s_docSheetWrapStyle }}">
+        <div style="{{ s_docPagesStyle }}">
+        <sc-if value="{{ s_showCertPage }}" hint-placeholder-val="{{ false }}">
+        <sc-for list="{{ s_certPages }}" as="scpage" hint-placeholder-count="0">
+        <div style="{{ scpage.pageStyle }}">
+        <div style="{{ scpage.clipStyle }}">
+        <div ref="{{ scpage.contentRef }}" style="{{ scpage.contentStyle }}">
+          <img data-scbrk="1" src="uploads/pasted-1785686843872-0.png" alt="Asset Five" style="width:215px;display:block;margin:8px auto 0">
+          <div data-scbrk="1" style="text-align:center;margin-top:30px">
+            <div style="font-size:13px;line-height:1.55">บริษัท แอสเซท ไฟว์ ดีเวลลอปเม้นท์ จำกัด เลขที่ 199 อาคาร เอส โอเอซิส ชั้น 12 ห้องเลขที่ 1210, 1211, 1212 ถนนวิภาวดีรังสิต แขวงจอมพล เขตจตุจักร กรุงเทพมหานคร 10900</div>
+            <div style="font-size:12.5px;line-height:1.55;margin-top:4px">Asset Five Development Co., Ltd.  199 S-OASIS Building, 12th Floor, Unit 1210, 1211, 1212, Vibhavadi-Rangsit Rd., Chomphol, Chatuchak, Bangkok 10900</div>
+            <div style="font-size:13px;margin-top:4px">เลขประจำตัวผู้เสียภาษี 010555614282</div>
+          </div>
+          <div data-scbrk="1" style="text-align:center;font-size:16px;font-weight:700;margin:24px 0 26px">ใบรับรองแทนใบเสร็จรับเงิน</div>
+          <table data-scbrk="1" style="width:100%;border-collapse:collapse;font-size:15px;table-layout:fixed">
+            <thead>
+              <tr style="background:#d9d9d9">
+                <th style="border:1px solid #000;padding:5px;width:7.4%;font-weight:700">ลำดับ</th>
+                <th style="border:1px solid #000;padding:5px;width:15.4%;font-weight:700">วัน เดือน ปี</th>
+                <th style="border:1px solid #000;padding:5px;width:45.3%;font-weight:700">รายละเอียดการจ่าย</th>
+                <th style="border:1px solid #000;padding:5px;width:13.4%;font-weight:700">จำนวนเงิน</th>
+                <th style="border:1px solid #000;padding:5px;width:18.5%;font-weight:700">หมายเหตุ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <sc-for list="{{ s_certRows }}" as="srow" hint-placeholder-count="0">
+                <tr>
+                  <td style="border:1px solid #000;padding:4px 6px;text-align:center;height:32px">{{ srow.no }}</td>
+                  <td style="border:1px solid #000;padding:4px 6px;text-align:center">{{ srow.date }}</td>
+                  <td style="border:1px solid #000;padding:4px 6px">{{ srow.detail }}</td>
+                  <td style="border:1px solid #000;padding:4px 6px;text-align:right">{{ srow.amount }}</td>
+                  <td style="border:1px solid #000;padding:4px 6px">{{ srow.note }}</td>
+                </tr>
+              </sc-for>
+              <sc-for list="{{ s_certBlankRows }}" as="sblank" hint-placeholder-count="0">
+                <tr>
+                  <td style="border:1px solid #000;height:32px"></td>
+                  <td style="border:1px solid #000"></td>
+                  <td style="border:1px solid #000"></td>
+                  <td style="border:1px solid #000"></td>
+                  <td style="border:1px solid #000"></td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+          <div data-scbrk="1" style="display:flex;align-items:stretch;font-size:15px">
+            <div style="width:68.1%;background:#d9d9d9;border:1px solid #000;border-top:none;height:30px;display:flex;align-items:center;justify-content:center">{{ s_amountWords }}</div>
+            <div style="width:13.4%;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;font-weight:700">รวมทั้งสิ้น</div>
+            <div style="width:18.5%;background:#d9d9d9;border:1px solid #000;border-top:none;height:30px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px">{{ s_totalAmount }}</div>
+          </div>
+          <div data-scbrk="1" style="font-size:13px;margin-top:28px">
+            <div style="display:flex;align-items:flex-end;gap:8px">
+              <span style="padding-left:100px">ข้าพเจ้า</span>
+              <span style="flex:1;border-bottom:1px dotted #000;text-align:center">{{ s_empName }}</span>
+              <span>ตำแหน่ง</span>
+              <span style="flex:1;border-bottom:1px dotted #000;text-align:center">{{ s_empPosition }}</span>
+            </div>
+            <div style="margin-top:16px;line-height:1.7">ขอรับรองว่า รายจ่ายข้างต้นนี้ไม่อาจเรียกเก็บใบเสร็จรับเงินจากผู้รับเงินได้ และข้าพเจ้าได้จ่ายไปในงานของบริษัท แอสเซท ไฟว์ ดีเวลลอปเม้นท์ จำกัด  โดยแท้</div>
+            <div style="display:flex;align-items:flex-end;gap:8px;margin-top:14px">
+              <span>ตั้งแต่วันที่</span>
+              <span style="width:170px;border-bottom:1px dotted #000;text-align:center">{{ s_certFrom }}</span>
+              <span>ถึงวันที่</span>
+              <span style="width:190px;border-bottom:1px dotted #000;text-align:center">{{ s_certTo }}</span>
+            </div>
+          </div>
+          <div data-scbrk="1" style="margin-top:auto;font-size:13px;padding-bottom:2px">
+            <div style="display:flex;align-items:flex-end;gap:8px;justify-content:flex-end">
+              <span>ลงชื่อ</span>
+              <span style="width:203px;border-bottom:1px dashed #000;text-align:center;display:flex;align-items:flex-end;justify-content:center;height:46px">{{ s_signatureImg }}</span>
+              <span style="width:80px">(ผู้เบิกจ่าย)</span>
+            </div>
+            <div style="display:flex;justify-content:flex-end;margin-top:3px">
+              <span style="width:203px;text-align:center">( {{ s_empName }} )</span>
+              <span style="width:88px"></span>
+            </div>
+            <div style="display:flex;align-items:flex-end;gap:8px;justify-content:flex-end;margin-top:15px">
+              <span>ลงชื่อ</span>
+              <span style="width:203px;border-bottom:1px dashed #000;text-align:center;display:flex;align-items:flex-end;justify-content:center;height:23px">{{ s_certApproverImg }}</span>
+              <span style="width:80px">(ผู้อนุมัติ)</span>
+            </div>
+            <div style="display:flex;justify-content:flex-end;margin-top:3px">
+              <span style="width:203px;text-align:center">( {{ s_manager }} )</span>
+              <span style="width:88px"></span>
+            </div>
+          </div>
+
+        </div>
+        </div>
+        </div>
+        </sc-for>
+        </sc-if>
+        <sc-for list="{{ s_a4Pages }}" as="spage" hint-placeholder-count="1">
+        <div style="{{ spage.pageStyle }}">
+        <div style="{{ spage.clipStyle }}">
+        <div ref="{{ spage.contentRef }}" style="{{ spage.contentStyle }}">
+          <div data-sbrk="1" style="border-bottom:2px solid var(--color-divider);padding-bottom:12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;{{ s_docHeaderExtra }}">
+            <div>
+              <div style="font-family:var(--font-heading);font-weight:800;font-size:14px">บริษัท แอสเซท ไฟว์ ดีเวลลอปเม้นท์ จำกัด</div>
+              <div style="font-family:var(--font-heading);font-weight:800;font-size:11px;opacity:.6;margin-top:2px">Asset Five Development Co., Ltd.</div>
+            </div>
+            <div style="{{ s_docNumBlockStyle }}">
+              <div style="font-size:10px;opacity:.55">เลขที่เอกสาร</div>
+              <div style="font-family:var(--font-heading);font-weight:800;font-size:13px">{{ s_docNumber }}</div>
+            </div>
+          </div>
+          <h3 data-sbrk="1" style="margin:0 0 14px;font-size:18px;text-align:center">เอกสารแสดงรายละเอียดค่าเดินทาง</h3>
+          <div data-sbrk="1" style="display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;font-size:12px;margin-bottom:14px">
+            <div><span style="opacity:.5">ผู้ขอเบิก</span><br><b>{{ s_empName }}</b></div>
+            <div><span style="opacity:.5">ตำแหน่ง</span><br><b>{{ s_empPosition }}</b></div>
+            <div><span style="opacity:.5">รหัสพนักงาน</span><br><b>{{ s_empId }}</b></div>
+            <div><span style="opacity:.5">วันที่</span><br><b>{{ s_docDate }}</b></div>
+          </div>
+          
+          <div data-sbrk="1" style="border:1px solid var(--color-divider);padding:12px;margin-bottom:14px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline">
+              <span style="font-size:12px;opacity:.6">จำนวนเงินรวม</span>
+              <span style="font-family:var(--font-heading);font-weight:800;font-size:22px">฿{{ s_totalAmount }}</span>
+            </div>
+            <div style="font-size:11px;opacity:.55;margin-top:4px;text-align:right">({{ s_amountWords }})</div>
+          </div>
+          <div style="margin-bottom:14px">
+            <div data-sbrk="1" style="font-size:11px;opacity:.5;margin-bottom:6px">รายละเอียด</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <sc-for list="{{ s_previewItems }}" as="sitem" hint-placeholder-count="0">
+                <div data-sbrk="1" style="{{ s_previewRowStyle }}">
+                  <div style="{{ s_previewAttachStyle }}">{{ sitem.attachment }}</div>
+                  <div style="{{ s_previewTextStyle }}">
+                    <div style="font-weight:800;text-transform:uppercase;letter-spacing:.03em">{{ sitem.typeLabel }}</div>
+                    <div><span style="opacity:.5">วันที่</span> {{ sitem.dateDisplay }}</div>
+                    <sc-if value="{{ sitem.hasRoute }}" hint-placeholder-val="{{ false }}">
+                      <div><span style="opacity:.5">ต้นทาง</span> {{ sitem.origin }}</div>
+                      <div><span style="opacity:.5">ปลายทาง</span> {{ sitem.destination }}</div>
+                    </sc-if>
+                    <sc-if value="{{ sitem.isPersonal }}" hint-placeholder-val="{{ false }}">
+                      <div><span style="opacity:.5">อัตรา</span> {{ sitem.ratePerKm }} บาท/กม. · <span style="opacity:.5">ระยะทาง</span> {{ sitem.distance }} กม.</div>
+                    </sc-if>
+                    <sc-if value="{{ sitem.hasRoute }}" hint-placeholder-val="{{ false }}">
+                      <div><span style="opacity:.5">เหตุผล</span> {{ sitem.purpose }}</div>
+                    </sc-if>
+                    <div style="font-weight:800">฿{{ sitem.amount }}</div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <sc-if value="{{ s_showDocSignature }}" hint-placeholder-val="{{ true }}">
+            <div data-sbrk="1" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px">
+              <div style="border-top:1px solid var(--color-divider);padding-top:6px">
+                <div style="font-size:10px;opacity:.5">ผู้จัดทำ</div>
+                <sc-if value="{{ s_hasSignature }}" hint-placeholder-val="{{ false }}">
+                  {{ s_signatureImg }}
+                  <div style="font-size:10px;margin-top:2px">{{ s_empName }}</div>
+                  <div style="font-size:9px;opacity:.5">{{ s_signedAt }}</div>
+                </sc-if>
+                <sc-if value="{{ s_noSignature }}" hint-placeholder-val="{{ true }}">
+                  <div style="font-size:11px;font-style:italic;opacity:.5;margin-top:4px">ยังไม่ได้ลงลายเซ็น</div>
+                </sc-if>
+              </div>
+              <div style="border-top:1px solid var(--color-divider);padding-top:6px">
+                <div style="font-size:10px;opacity:.5">ผู้ตรวจสอบ/ผู้อนุมัติ</div>
+                <sc-if value="{{ s_approverSigned }}" hint-placeholder-val="{{ false }}">
+                  {{ s_approverImg }}
+                  <div style="font-size:10px;margin-top:2px">{{ s_manager }}</div>
+                  <div style="font-size:9px;opacity:.5">{{ s_approverSignedAt }}</div>
+                </sc-if>
+                <sc-if value="{{ s_approverPending }}" hint-placeholder-val="{{ true }}">
+                  <div style="font-size:11px;font-style:italic;opacity:.5;margin-top:4px">{{ s_approverStatusText }}</div>
+                </sc-if>
+              </div>
+            </div>
+          </sc-if>
+
+        </div>
+        </div>
+        </div>
+        </sc-for>
+        </div>
+        </div>
+      </div>
+        <div style="flex-shrink:0;padding:12px var(--space-4);border-top:2px solid var(--color-divider);display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;justify-content:center;gap:8px">
+          <button onclick="{{ s_zoomOut }}" style="width:32px;height:32px;border:1px solid var(--color-divider);background:transparent;cursor:pointer;font-size:16px;font-weight:800;color:var(--color-text);display:flex;align-items:center;justify-content:center">−</button>
+          <span style="font-size:12px;opacity:.6;min-width:44px;text-align:center">{{ s_a4ZoomLabel }}</span>
+          <button onclick="{{ s_zoomIn }}" style="width:32px;height:32px;border:1px solid var(--color-divider);background:transparent;cursor:pointer;font-size:16px;font-weight:800;color:var(--color-text);display:flex;align-items:center;justify-content:center">+</button>
+          </div>
+          <sc-if value="{{ s_canDownload }}" hint-placeholder-val="{{ true }}">
+          <button class="btn btn-primary" onclick="{{ s_downloadPdf }}" style="width:100%;justify-content:center;gap:8px;box-sizing:border-box;border:1px solid transparent"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="M7 10l5 5 5-5"></path><path d="M12 15V3"></path></svg>ดาวน์โหลดเอกสาร</button>
+          </sc-if>
+        </div>
+      </div>
+      </sc-if>
+      <sc-if value="{{ showReasonPanel }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;background:color-mix(in srgb, #000 45%, transparent);display:flex;align-items:flex-end;z-index:20">
+          <div style="background:#fff;width:100%;border-top:2px solid var(--color-divider);padding:18px;display:flex;flex-direction:column;gap:12px;max-height:80%;overflow-y:auto">
+            <h3 style="margin:0;font-size:16px">{{ reasonPanelTitle }}</h3>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <sc-for list="{{ reasonOptions }}" as="r" hint-placeholder-count="5">
+                <div onclick="{{ r.select }}" style="border:1px solid;padding:10px 12px;font-size:13px;cursor:pointer;{{ r.style }}">{{ r.label }}</div>
+              </sc-for>
+            </div>
+            <sc-if value="{{ isOtherReason }}" hint-placeholder-val="{{ false }}">
+              <div class="field"><label>*โปรดระบุ</label><input class="input" value="{{ otherReasonText }}" oninput="{{ onOtherReason }}" style="width:100%;background:#fff"></div>
+            </sc-if>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="btn btn-secondary" onclick="{{ cancelReasonPanel }}" style="flex:1;justify-content:center;box-sizing:border-box">ยกเลิก</button>
+              <button class="btn btn-primary" disabled="{{ reasonSubmitDisabled }}" onclick="{{ askReasonConfirm }}" style="flex:1;justify-content:center;box-sizing:border-box;border:1px solid transparent">ยืนยัน</button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ showReasonConfirm }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;background:color-mix(in srgb, #000 45%, transparent);display:flex;align-items:flex-end;z-index:24">
+          <div style="background:#fff;width:100%;border-top:2px solid var(--color-divider);padding:18px;display:flex;flex-direction:column;gap:14px">
+            <h3 style="margin:0;font-size:16px">ยืนยันการทำรายการหรือไม่</h3>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-secondary" onclick="{{ cancelReasonConfirm }}" style="flex:1;justify-content:center;box-sizing:border-box">ยกเลิก</button>
+              <button class="btn btn-primary" onclick="{{ submitReason }}" style="flex:1;justify-content:center;box-sizing:border-box;border:1px solid transparent">ยืนยัน</button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ showApproveConfirm }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;background:color-mix(in srgb, #000 45%, transparent);display:flex;align-items:flex-end;z-index:20">
+          <div style="background:#fff;width:100%;border-top:2px solid var(--color-divider);padding:18px;display:flex;flex-direction:column;gap:12px;max-height:88%;overflow-y:auto">
+            <h3 style="margin:0;font-size:16px">ยืนยันการทำรายการหรือไม่</h3>
+            <div style="border:1px solid var(--color-divider);padding:10px;font-size:12px;display:flex;flex-direction:column;gap:4px">
+              <div style="display:flex;justify-content:space-between"><span style="opacity:.5">ผู้อนุมัติ</span><b>{{ employee.manager }}</b></div>
+              <div style="display:flex;justify-content:space-between"><span style="opacity:.5">เอกสาร</span><b>{{ activeDoc.docNo }}</b></div>
+              <div style="display:flex;justify-content:space-between"><span style="opacity:.5">จำนวนเงิน</span><b>฿{{ activeDoc.amount }}</b></div>
+            </div>
+            <p style="font-size:11px;line-height:1.6;margin:0">ข้าพเจ้าขอรับรองว่าได้ตรวจสอบเอกสารและหลักฐานประกอบแล้ว และอนุมัติรายการนี้</p>
+            <canvas ref="{{ mgrCanvasRefTpl }}" width="326" height="120" onpointerdown="{{ mgrDown }}" onpointermove="{{ mgrMove }}" onpointerup="{{ mgrUp }}" onpointerleave="{{ mgrUp }}" style="width:100%;height:120px;border:1px solid var(--color-divider);touch-action:none;background:#fff"></canvas>
+            <button onclick="{{ clearMgrSignature }}" style="align-self:flex-start;font-size:11px;background:transparent;border:none;color:var(--color-text);opacity:.55;cursor:pointer;text-decoration:underline">ล้างลายเซ็น</button>
+            <div style="display:flex;gap:8px;margin-top:4px">
+              <button class="btn btn-secondary" onclick="{{ cancelApprove }}" style="flex:1;justify-content:center;box-sizing:border-box">ยกเลิก</button>
+              <button class="btn btn-primary" disabled="{{ approveDisabled }}" onclick="{{ confirmApprove }}" style="flex:1;justify-content:center;box-sizing:border-box;border:1px solid transparent">ยืนยัน</button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+    </sc-if>
+
+  </div>
+
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--color-text);color:#fff;padding:10px 16px;font-size:12px;z-index:50;box-shadow:var(--shadow-md)">{{ toast }}</div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.empCanvasRef = React.createRef();
+    this.mgrCanvasRef = React.createRef();
+    this.fileInputRef = React.createRef();
+    this._empDrawing = false;
+    this._mgrDrawing = false;
+    this.state = this.initialState();
+  }
+
+  initialState() {
+    return {
+      role: 'employee',
+      screen: 'login',
+      expenseType: null,
+      files: [],
+      isExtracting: false,
+      form: { date: '28 ก.ค. 2569', merchant: 'แท็กซี่มิเตอร์ (ไม่ทราบชื่อผู้ขับ)', origin: 'สำนักงานใหญ่ ถ.สาทร', destination: 'บมจ. ลูกค้า ABC ถ.สุขุมวิท', distance: '14', amount: '245', project: 'CC-4102 · ฝ่ายขาย', reason: 'ผู้ขับไม่ออกใบเสร็จ', payment: 'เงินสด', description: 'เดินทางไปพบลูกค้าเพื่อประชุมนำเสนอสินค้า' },
+      items: [],
+      docNumber: null,
+      employeeSignatureDrawn: false,
+      signatureDataUrl: null,
+      signedAt: null,
+      consentChecked: false,
+      managerSignatureDrawn: false,
+      showApproveConfirm: false,
+      showAddMenu: false,
+      showUploadMenu: false,
+      showReasonPanel: false,
+      reasonMode: null,
+      selectedReason: null,
+      activeDocId: null,
+      docFilter: null,
+      uploadError: false,
+      toast: null,
+      docs: this.seedDocs(),
+    };
+  }
+
+  seedDocs() {
+    return [
+      { id: 'a1', docNo: 'CPC-2026-000512', employeeName: 'ปิยะดา รักเรียน', employeeId: 'EMP-10488', employeeDept: 'เจ้าหน้าที่การตลาด', typeLabel: 'ค่าเดินทาง', amount: '1,860.00', date: '3 ส.ค. 2569', project: 'CC-4102 · ฝ่ายขาย', status: 'approved', approvedBy: 'ณัฐวุฒิ ศรีสุข', approvedAt: '3 ส.ค. 16:20', description: 'ค่าเดินทางปฏิบัติงาน', reason: 'ไม่มีใบเสร็จรับเงิน', payment: 'เงินสด', items: [{ id:'a1a', type:'personal', date:'2026-08-03', origin:'สำนักงานใหญ่ ถ.สาทร', destination:'โครงการแอสเซทวิลล์ ระยอง', distance:'310', ratePerKm:'6', amount:'1,860.00', purpose:'ไปปฏิบัติงาน', fileName:'แผนที่เส้นทางระยอง.png' }], timeline: [ {action:'สร้างเอกสาร', person:'ปิยะดา รักเรียน', role:'พนักงาน', time:'3 ส.ค. 16:20'}, {action:'ลงลายเซ็นและส่งอนุมัติ', person:'ปิยะดา รักเรียน', role:'พนักงาน', time:'3 ส.ค. 16:20'}, {action:'อนุมัติเอกสาร', person:'ณัฐวุฒิ ศรีสุข', role:'หัวหน้างาน', time:'3 ส.ค. 16:20'} ] },
+      { id: 'a2', docNo: 'CPC-2026-000515', employeeName: 'ศศิธร แซ่ตั้ง', employeeId: 'EMP-10502', employeeDept: 'เจ้าหน้าที่จัดซื้อ', typeLabel: 'ค่าเดินทาง', amount: '420.00', date: '4 ส.ค. 2569', project: 'CC-4102 · ฝ่ายขาย', status: 'approved', approvedBy: 'ณัฐวุฒิ ศรีสุข', approvedAt: '4 ส.ค. 10:05', description: 'ค่าเดินทางปฏิบัติงาน', reason: 'ไม่มีใบเสร็จรับเงิน', payment: 'เงินสด', items: [{ id:'a2a', type:'public', date:'2026-08-04', origin:'สำนักงานใหญ่ ถ.สาทร', destination:'ศูนย์การค้าเซ็นทรัลพระราม 9', amount:'420.00', purpose:'ไปปฏิบัติงาน', fileName:'ใบเสร็จรถโดยสาร.jpg' }], timeline: [ {action:'สร้างเอกสาร', person:'ศศิธร แซ่ตั้ง', role:'พนักงาน', time:'4 ส.ค. 10:05'}, {action:'ลงลายเซ็นและส่งอนุมัติ', person:'ศศิธร แซ่ตั้ง', role:'พนักงาน', time:'4 ส.ค. 10:05'}, {action:'อนุมัติเอกสาร', person:'ณัฐวุฒิ ศรีสุข', role:'หัวหน้างาน', time:'4 ส.ค. 10:05'} ] },
+      { id: 'a3', docNo: 'CPC-2026-000509', employeeName: 'ปิยะดา รักเรียน', employeeId: 'EMP-10488', employeeDept: 'เจ้าหน้าที่การตลาด', typeLabel: 'ค่าเดินทาง', amount: '240.00', date: '1 ส.ค. 2569', project: 'CC-4102 · ฝ่ายขาย', status: 'approved', approvedBy: 'ณัฐวุฒิ ศรีสุข', approvedAt: '1 ส.ค. 18:44', description: 'ค่าเดินทางปฏิบัติงาน', reason: 'ไม่มีใบเสร็จรับเงิน', payment: 'เงินสด', items: [{ id:'a3a', type:'toll', date:'2026-08-01', amount:'240.00', purpose:'ไปปฏิบัติงาน', fileName:'ใบเสร็จทางด่วน.jpg' }], timeline: [ {action:'สร้างเอกสาร', person:'ปิยะดา รักเรียน', role:'พนักงาน', time:'1 ส.ค. 18:44'}, {action:'ลงลายเซ็นและส่งอนุมัติ', person:'ปิยะดา รักเรียน', role:'พนักงาน', time:'1 ส.ค. 18:44'}, {action:'อนุมัติเอกสาร', person:'ณัฐวุฒิ ศรีสุข', role:'หัวหน้างาน', time:'1 ส.ค. 18:44'} ] },
+      { id: 'a4', docNo: 'CPC-2026-000496', employeeName: 'ศศิธร แซ่ตั้ง', employeeId: 'EMP-10502', employeeDept: 'เจ้าหน้าที่จัดซื้อ', typeLabel: 'ค่าเดินทาง', amount: '1,140.00', date: '18 ก.ค. 2569', project: 'CC-4102 · ฝ่ายขาย', status: 'approved', approvedBy: 'ณัฐวุฒิ ศรีสุข', approvedAt: '18 ก.ค. 14:12', description: 'ค่าเดินทางปฏิบัติงาน', reason: 'ไม่มีใบเสร็จรับเงิน', payment: 'เงินสด', items: [{ id:'a4a', type:'personal', date:'2026-07-18', origin:'สำนักงานใหญ่ ถ.สาทร', destination:'โรงงานผู้ผลิต จ.สมุทรปราการ', distance:'190', ratePerKm:'6', amount:'1,140.00', purpose:'ไปปฏิบัติงาน', fileName:'แผนที่โรงงาน.png' }], timeline: [ {action:'สร้างเอกสาร', person:'ศศิธร แซ่ตั้ง', role:'พนักงาน', time:'18 ก.ค. 14:12'}, {action:'ลงลายเซ็นและส่งอนุมัติ', person:'ศศิธร แซ่ตั้ง', role:'พนักงาน', time:'18 ก.ค. 14:12'}, {action:'อนุมัติเอกสาร', person:'ณัฐวุฒิ ศรีสุข', role:'หัวหน้างาน', time:'18 ก.ค. 14:12'} ] },
+      { id: 'a5', docNo: 'CPC-2026-000452', employeeName: 'ปิยะดา รักเรียน', employeeId: 'EMP-10488', employeeDept: 'เจ้าหน้าที่การตลาด', typeLabel: 'ค่าเดินทาง', amount: '680.00', date: '22 มิ.ย. 2569', project: 'CC-4102 · ฝ่ายขาย', status: 'approved', approvedBy: 'ณัฐวุฒิ ศรีสุข', approvedAt: '22 มิ.ย. 11:35', description: 'ค่าเดินทางปฏิบัติงาน', reason: 'ไม่มีใบเสร็จรับเงิน', payment: 'เงินสด', items: [{ id:'a5a', type:'public', date:'2026-06-22', origin:'สำนักงานใหญ่ ถ.สาทร', destination:'งานแสดงสินค้าไบเทค บางนา', amount:'680.00', purpose:'ไปปฏิบัติงาน', fileName:'ใบเสร็จค่าโดยสาร.jpg' }], timeline: [ {action:'สร้างเอกสาร', person:'ปิยะดา รักเรียน', role:'พนักงาน', time:'22 มิ.ย. 11:35'}, {action:'ลงลายเซ็นและส่งอนุมัติ', person:'ปิยะดา รักเรียน', role:'พนักงาน', time:'22 มิ.ย. 11:35'}, {action:'อนุมัติเอกสาร', person:'ณัฐวุฒิ ศรีสุข', role:'หัวหน้างาน', time:'22 มิ.ย. 11:35'} ] },
+      { id: 'a6', docNo: 'CPC-2026-000431', employeeName: 'ศศิธร แซ่ตั้ง', employeeId: 'EMP-10502', employeeDept: 'เจ้าหน้าที่จัดซื้อ', typeLabel: 'ค่าเดินทาง', amount: '2,340.00', date: '15 พ.ค. 2569', project: 'CC-4102 · ฝ่ายขาย', status: 'approved', approvedBy: 'ณัฐวุฒิ ศรีสุข', approvedAt: '15 พ.ค. 09:50', description: 'ค่าเดินทางปฏิบัติงาน', reason: 'ไม่มีใบเสร็จรับเงิน', payment: 'เงินสด', items: [{ id:'a6a', type:'personal', date:'2026-05-15', origin:'สำนักงานใหญ่ ถ.สาทร', destination:'โครงการแอสเซทพาร์ค หัวหิน', distance:'390', ratePerKm:'6', amount:'2,340.00', purpose:'ไปปฏิบัติงาน', fileName:'แผนที่หัวหิน.png' }], timeline: [ {action:'สร้างเอกสาร', person:'ศศิธร แซ่ตั้ง', role:'พนักงาน', time:'15 พ.ค. 09:50'}, {action:'ลงลายเซ็นและส่งอนุมัติ', person:'ศศิธร แซ่ตั้ง', role:'พนักงาน', time:'15 พ.ค. 09:50'}, {action:'อนุมัติเอกสาร', person:'ณัฐวุฒิ ศรีสุข', role:'หัวหน้างาน', time:'15 พ.ค. 09:50'} ] },
+      { id: 'd1', docNo: 'CPC-2026-000478', employeeName: 'ณัฐวุฒิ ศรีสุข', employeeId: 'EMP-10234', employeeDept: 'ฝ่ายขาย', typeLabel: 'ค่าทางด่วน', amount: '130', date: '24 ก.ค. 2569', project: 'CC-4102 · ฝ่ายขาย', status: 'approved', description: 'ค่าทางด่วนไปพบลูกค้า', reason: 'เครื่องรับบัตรขัดข้อง', payment: 'เงินสด', items: [{ id:'i1', type:'toll', date:'2026-07-24', amount:'130.00', purpose:'ไปปฏิบัติงาน', fileName:'ใบเสร็จค่าทางด่วน.jpg' }], timeline: [ {action:'สร้างเอกสาร', person:'ณัฐวุฒิ ศรีสุข', role:'พนักงาน', time:'24 ก.ค. 09:10'}, {action:'ลงลายเซ็นและส่งอนุมัติ', person:'ณัฐวุฒิ ศรีสุข', role:'พนักงาน', time:'24 ก.ค. 09:14'}, {action:'อนุมัติเอกสาร', person:'สุพจน์ วงศ์เจริญ', role:'หัวหน้างาน', time:'24 ก.ค. 15:40'} ] },
+      { id: 'd2', docNo: 'CPC-2026-000481', employeeName: 'ณัฐวุฒิ ศรีสุข', employeeId: 'EMP-10234', employeeDept: 'ฝ่ายขาย', typeLabel: 'ค่าอาหาร', amount: '890', date: '26 ก.ค. 2569', project: 'CC-4102 · ฝ่ายขาย', status: 'correction', description: 'เลี้ยงรับรองลูกค้า', reason: 'ร้านไม่มีใบกำกับภาษี', payment: 'เงินสด', correctionReason: 'หลักฐานที่แนบไม่ชัดเจน กรุณาถ่ายภาพใหม่', items: [{ id:'i2', type:'public', date:'2026-07-26', origin:'สำนักงานใหญ่ ถ.สาทร', destination:'ร้านอาหารสุขุมวิท 24', amount:'890.00', purpose:'ไปปฏิบัติงาน', fileName:'ใบเสร็จร้านอาหาร.jpg' }], timeline: [ {action:'สร้างเอกสาร', person:'ณัฐวุฒิ ศรีสุข', role:'พนักงาน', time:'26 ก.ค. 12:02'}, {action:'ส่งอนุมัติ', person:'ณัฐวุฒิ ศรีสุข', role:'พนักงาน', time:'26 ก.ค. 12:05'}, {action:'ขอให้แก้ไข: หลักฐานไม่ชัดเจน', person:'สุพจน์ วงศ์เจริญ', role:'หัวหน้างาน', time:'26 ก.ค. 17:22'} ] },
+      { id: 'd3', docNo: 'CPC-2026-000483', employeeName: 'ณัฐวุฒิ ศรีสุข', employeeId: 'EMP-10234', employeeDept: 'ฝ่ายขาย', typeLabel: 'ค่าจอดรถ', amount: '60', date: '27 ก.ค. 2569', project: 'CC-4102 · ฝ่ายขาย', status: 'pending', description: 'ค่าจอดรถขณะพบลูกค้า', reason: 'ลานจอดไม่ออกใบเสร็จ', payment: 'เงินสด', items: [{ id:'i3', type:'toll', date:'2026-07-27', amount:'60.00', purpose:'ไปปฏิบัติงาน', fileName:'บัตรจอดรถ.jpg' }], timeline: [ {action:'สร้างเอกสาร', person:'ณัฐวุฒิ ศรีสุข', role:'พนักงาน', time:'27 ก.ค. 08:40'}, {action:'ส่งอนุมัติ', person:'ณัฐวุฒิ ศรีสุข', role:'พนักงาน', time:'27 ก.ค. 08:45'} ] },
+      { id: 'd6', docNo: 'CPC-2026-000459', employeeName: 'ณัฐวุฒิ ศรีสุข', employeeId: 'EMP-10234', employeeDept: 'ฝ่ายขาย', typeLabel: 'ค่าเดินทาง', amount: '320.00', date: '20 ก.ค. 2569', project: 'CC-4102 · ฝ่ายขาย', status: 'rejected', description: 'หลักฐานไม่เพียงพอ', reason: '-', payment: 'เงินสด', items: [{ id:'i6', type:'personal', date:'2026-07-20', origin:'สำนักงานใหญ่ ถ.สาทร', destination:'ลูกค้า ถ.พระราม 9', distance:'53.33', ratePerKm:'6', amount:'320.00', purpose:'ไปปฏิบัติงาน', fileName:'แผนที่.png' }], timeline: [ {action:'สร้างเอกสาร', person:'ณัฐวุฒิ ศรีสุข', role:'พนักงาน', time:'20 ก.ค. 09:00'}, {action:'ไม่อนุมัติเอกสาร', person:'สุพจน์ วงศ์เจริญ', role:'หัวหน้างาน', time:'20 ก.ค. 11:30'} ] },
+      { id: 'd4', docNo: 'CPC-2026-000470', employeeName: 'ปิยะดา รักเรียน', employeeId: 'EMP-10488', employeeDept: 'ฝ่ายการตลาด', typeLabel: 'ค่าเดินทาง', amount: '1,850', date: '25 ก.ค. 2569', project: 'CC-2210 · การตลาด', status: 'pending', description: 'เดินทางร่วมงาน Roadshow เชียงใหม่', reason: 'จองผ่านตัวแทนไม่มีใบเสร็จบริษัท', payment: 'โอนเงิน', items: [{ id:'i4', type:'personal', date:'2026-07-25', origin:'สำนักงานใหญ่ ถ.สาทร', destination:'ศูนย์ประชุมเชียงใหม่', distance:'250', ratePerKm:'6', amount:'1500.00', purpose:'ไปปฏิบัติงาน', fileName:'แผนที่เส้นทาง.png' },{ id:'i4b', type:'toll', date:'2026-07-25', amount:'350.00', purpose:'ไปปฏิบัติงาน', fileName:'ใบเสร็จทางด่วน.jpg' }], timeline: [ {action:'สร้างเอกสาร', person:'ปิยะดา รักเรียน', role:'พนักงาน', time:'25 ก.ค. 10:00'}, {action:'ส่งอนุมัติ', person:'ปิยะดา รักเรียน', role:'พนักงาน', time:'25 ก.ค. 10:20'} ] },
+      { id: 'd5', docNo: 'CPC-2026-000466', employeeName: 'ศศิธร แซ่ตั้ง', employeeId: 'EMP-10502', employeeDept: 'ฝ่ายบัญชี', typeLabel: 'ค่าวัสดุหรืออุปกรณ์', amount: '3,200', date: '23 ก.ค. 2569', project: 'CC-1000 · บัญชี', status: 'pending', description: 'ซื้ออุปกรณ์สำนักงานเร่งด่วน', reason: 'ร้านค้าปลีกไม่มีใบกำกับภาษี', payment: 'เงินสด', items: [{ id:'i5', type:'public', date:'2026-07-23', origin:'สำนักงานใหญ่ ถ.สาทร', destination:'ร้านวัสดุสำนักงาน', amount:'3200.00', purpose:'ไปปฏิบัติงาน', fileName:'ใบส่งของ.pdf' }], timeline: [ {action:'สร้างเอกสาร', person:'ศศิธร แซ่ตั้ง', role:'พนักงาน', time:'23 ก.ค. 14:00'}, {action:'ส่งอนุมัติ', person:'ศศิธร แซ่ตั้ง', role:'พนักงาน', time:'23 ก.ค. 14:10'} ] },
+    ];
+  }
+
+  account() {
+    const e = this.employee();
+    return { name: e.name, position: e.position, id: e.id, email: 'natthawut.s@assetfive.co.th', roles: ['requester', 'approver'] };
+  }
+
+  employee() {
+    return { name: 'ณัฐวุฒิ ศรีสุข', dept: 'ฝ่ายขาย', position: 'เจ้าหน้าที่ขายอาวุโส', id: 'EMP-10234', manager: 'สุพจน์ วงศ์เจริญ', company: 'บริษัท แอสเซทไฟว์ จำกัด', email: 'nattawut.s@assetfive.co.th' };
+  }
+
+  statusMeta(status) {
+    const map = {
+      draft: { label: 'แบบร่าง', style: 'border-color:var(--color-divider);color:var(--color-text);opacity:.7' },
+      pending: { label: 'รออนุมัติ', style: 'border-color:oklch(48% .13 250);background:oklch(48% .13 250);color:#fff' },
+      correction: { label: 'ต้องแก้ไข', style: 'border-color:var(--color-accent-500);background:var(--color-accent-100);color:var(--color-accent-700)', alert: true },
+      rejected: { label: 'ไม่อนุมัติ', style: 'border-color:var(--color-neutral-400);background:var(--color-neutral-300);color:var(--color-text)' },
+      approved: { label: 'อนุมัติแล้ว', style: 'border-color:oklch(52% .13 150);background:oklch(52% .13 150);color:#fff' },
+    };
+    return map[status] || map.draft;
+  }
+
+  alertIcon() {
+    return React.createElement('svg', { width: 15, height: 15, viewBox: '0 0 24 24', fill: 'none', stroke: 'var(--color-accent-700)', strokeWidth: 2.4, strokeLinecap: 'round', strokeLinejoin: 'round', style: { flexShrink: 0 }, dangerouslySetInnerHTML: { __html: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>' } });
+  }
+
+  signOut() { this.setState({ screen: 'login', role: 'employee', docFilter: null }); }
+  toggleDocFilter(kind) { this.setState({ docFilter: this.state.docFilter === kind ? null : kind }); }
+
+  thaiBahtText(amountStr) {
+    const num = parseInt(String(amountStr).replace(/,/g, ''), 10) || 0;
+    const digitWords = ['ศูนย์','หนึ่ง','สอง','สาม','สี่','ห้า','หก','เจ็ด','แปด','เก้า'];
+    const posWords = ['','สิบ','ร้อย','พัน','หมื่น','แสน'];
+    let numStr = String(num);
+    let result = '';
+    const len = numStr.length;
+    for (let i = 0; i < len; i++) {
+      const digit = parseInt(numStr[i], 10);
+      const pos = (len - i - 1) % 6;
+      if (i > 0 && pos === 5) result += 'ล้าน';
+      if (digit !== 0) {
+        if (pos === 0 && digit === 1 && len - i > 1) result += 'เอ็ด';
+        else if (pos === 1 && digit === 2) result += 'ยี่' + posWords[1];
+        else if (pos === 1 && digit === 1) result += posWords[1];
+        else result += digitWords[digit] + posWords[pos];
+      }
+    }
+    return (result || 'ศูนย์') + 'บาทถ้วน';
+  }
+
+  expenseTypeList() {
+    const mk = (id, label, path) => ({
+      id, label,
+      icon: React.createElement('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', dangerouslySetInnerHTML: { __html: path } }),
+      select: () => this.selectExpenseType(id, label),
+    });
+    return [
+      { id: 'travelGroup', label: 'ค่าเดินทาง',
+        icon: React.createElement('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', dangerouslySetInnerHTML: { __html: '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>' } }),
+        select: () => this.setState({ expenseType: { id: 'travel', label: 'ค่าเดินทาง' }, screen: 'upload', items: [] }) },
+    ];
+  }
+
+  selectExpenseType(id, label) {
+    this.setState({ expenseType: { id, label }, screen: 'upload', items: [] });
+  }
+
+  itemTypeMeta() {
+    return { personal: 'พาหนะส่วนบุคคล', public: 'รถโดยสารสาธารณะ', toll: 'ค่าผ่านทางพิเศษ' };
+  }
+
+  blankItem(type) {
+    return { id: 'it' + Date.now() + Math.random().toString(36).slice(2, 6), type: type || 'personal', date: '2026-07-28', origin: '', destination: '', distance: '', ratePerKm: '6', amount: '', purpose: 'ไปปฏิบัติงาน' };
+  }
+
+  toggleAddMenu() { this.setState({ showAddMenu: !this.state.showAddMenu }); }
+  addItem(type) {
+    const s = this.state;
+    this.setState({ items: [...s.items, this.blankItem(type || (s.expenseType ? s.expenseType.id : 'travel'))], showAddMenu: false });
+  }
+  removeItem(id) {
+    this.setState({ items: this.state.items.filter(it => it.id !== id) });
+  }
+  setItemType(id, type) {
+    this.setState({ items: this.state.items.map(it => it.id === id ? Object.assign({}, it, { type }) : it) });
+  }
+  attachmentFor(fileId, readOnly, itemId) {
+    const f = this.state.files.find(x => x.id === fileId);
+    if (!f) {
+      if (readOnly || !itemId) return null;
+      return React.createElement('button', {
+        onClick: () => this.triggerItemFilePicker(itemId),
+        style: { display: 'inline-flex', alignSelf: 'flex-start', alignItems: 'center', gap: 6, border: '1px dashed var(--color-divider)', background: 'transparent', padding: '8px 10px', fontSize: 11.5, fontWeight: 700, fontFamily: 'var(--font-body)', color: 'var(--color-text)', cursor: 'pointer' },
+      },
+        React.createElement('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', dangerouslySetInnerHTML: { __html: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/>' } }),
+        'อัปโหลดไฟล์');
+    }
+    if (readOnly) {
+      if (f.isImage && f.url) {
+        return React.createElement('img', { src: f.url, style: { width: '100%', display: 'block', border: '1px solid var(--color-divider)' } });
+      }
+      return React.createElement('div', { style: { border: '1px solid var(--color-divider)', padding: '5px 8px', fontSize: 10, overflow: 'hidden', textOverflow: 'ellipsis' } }, f.name);
+    }
+    const removeBtn = React.createElement('button', {
+      onClick: () => this.removeFile(f.id),
+      style: { border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--color-accent-700)', padding: 2, display: 'flex', alignItems: 'center' },
+      dangerouslySetInnerHTML: { __html: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>' },
+    });
+    if (f.isImage && f.url) {
+      return React.createElement('div', { style: { position: 'relative', display: 'inline-block' } },
+        React.createElement('img', { src: f.url, style: { width: '100%', maxHeight: 140, objectFit: 'cover', display: 'block', border: '1px solid var(--color-divider)' } }),
+        React.createElement('div', { style: { position: 'absolute', top: 4, right: 4, background: '#fff', border: '1px solid var(--color-divider)', display: 'flex' } }, removeBtn));
+    }
+    return React.createElement('div', { style: { display: 'inline-flex', alignSelf: 'flex-start', width: 'fit-content', alignItems: 'center', gap: 6, border: '1px solid var(--color-divider)', background: 'var(--color-neutral-100)', padding: '5px 8px', fontSize: 11, maxWidth: '100%' } },
+      React.createElement('svg', { width: 13, height: 13, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', style: { flexShrink: 0, opacity: .6 }, dangerouslySetInnerHTML: { __html: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>' } }),
+      React.createElement('span', { style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, f.name), removeBtn);
+  }
+
+  formatThaiDate(iso) {
+    if (!iso) return '';
+    const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return iso;
+    const months = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+    return parseInt(m[3], 10) + ' ' + months[parseInt(m[2], 10) - 1] + ' ' + (parseInt(m[1], 10) + 543);
+  }
+
+  roundMoney(value) {
+    const n = parseFloat(String(value).replace(/,/g, '')) || 0;
+    return (Math.round((n + Number.EPSILON) * 100) / 100).toFixed(2);
+  }
+
+  updateItemField(id, key, value) {
+    this.setState({ items: this.state.items.map(it => {
+      if (it.id !== id) return it;
+      const next = Object.assign({}, it, { [key]: value });
+      if (next.type === 'personal' && (key === 'distance' || key === 'ratePerKm')) {
+        const computed = (parseFloat(next.distance) || 0) * (parseFloat(next.ratePerKm) || 0);
+        next.amount = this.roundMoney(computed);
+      }
+      return next;
+    }) });
+  }
+
+  formatItemAmount(id) {
+    this.setState({ items: this.state.items.map(it => it.id === id && it.type !== 'personal' ? Object.assign({}, it, { amount: this.roundMoney(it.amount) }) : it) });
+  }
+
+  travelSubTypes() {
+    return [
+      { id: 'personal', label: 'พาหนะส่วนบุคคล' },
+      { id: 'public', label: 'รถโดยสารสาธารณะ' },
+      { id: 'toll', label: 'ค่าผ่านทางพิเศษ' },
+    ];
+  }
+  shiftMonth(delta) {
+    const cur = this.state.monthOffset === undefined || this.state.monthOffset === null ? (this._lastMonthOffset || 0) : this.state.monthOffset;
+    const next = cur + delta;
+    this.setState({ monthOffset: next > 0 ? 0 : next });
+  }
+  switchToManager() {
+    if (this.account().roles.indexOf('approver') < 0) return;
+    this.setState({ role: 'manager', screen: 'managerDashboard', activeDocId: null, docViewer: false });
+  }
+  switchToEmployee() {
+    if (this.account().roles.indexOf('requester') < 0) return;
+    this.setState({ role: 'employee', screen: 'dashboard', activeDocId: null, docViewer: false });
+  }
+  doLogin() { this.setState({ screen: 'dashboard' }); }
+  goDashboard() { this.setState({ screen: this.state.role === 'manager' ? 'managerDashboard' : 'dashboard' }); }
+  goCreate() { this.setState({ screen: 'create' }); }
+  goUpload() { this.setState({ screen: 'upload' }); }
+  goOcr() { this.setState({ screen: 'ocr' }); }
+  goDetails() { this.setState({ screen: 'details' }); }
+  goDetailsFromOcr() {
+    const docNumber = this.state.docNumber || ('CPC-2026-' + String(485 + Math.floor(Math.random() * 40)).padStart(6, '0'));
+    this.syncItemsToForm();
+    this.setState({ screen: 'sign', docNumber });
+  }
+  goPreview() {
+    const docNumber = this.state.docNumber || ('CPC-2026-' + String(485 + Math.floor(Math.random() * 40)).padStart(6, '0'));
+    this.syncItemsToForm();
+    this.setState({ screen: 'preview', docNumber, a4Mode: false, a4Offsets: null, a4Height: 0 });
+  }
+  goSignFromPreview() { this.setState({ screen: 'sign' }); }
+  notImplemented() { this.showToast('ฟีเจอร์นี้จะเปิดใช้งานเร็ว ๆ นี้'); }
+
+  showToast(message) {
+    this.setState({ toast: message });
+    clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => this.setState({ toast: null }), 2200);
+  }
+
+  resetDemo() { this.setState(this.initialState()); }
+
+  toggleUploadMenu() { this.setState({ showUploadMenu: !this.state.showUploadMenu }); }
+  triggerItemFilePicker(itemId) {
+    this._pendingItemId = itemId;
+    this.triggerFilePicker('file');
+  }
+  triggerFilePicker(mode) {
+    const input = this.fileInputRef.current;
+    if (!input) return;
+    if (mode === 'camera') { input.setAttribute('capture', 'environment'); input.setAttribute('accept', 'image/*'); }
+    else if (mode === 'gallery') { input.removeAttribute('capture'); input.setAttribute('accept', 'image/*'); }
+    else { input.removeAttribute('capture'); input.setAttribute('accept', 'image/*,application/pdf'); }
+    this.setState({ showUploadMenu: false });
+    input.click();
+  }
+
+  onFilesSelected(e) {
+    const list = Array.from(e.target.files || []);
+    if (list.length === 0) return;
+    const newFiles = list.map((file, i) => ({
+      id: 'f' + Date.now() + i,
+      name: file.name,
+      isImage: file.type.startsWith('image'),
+      isPdf: file.type === 'application/pdf',
+      url: file.type.startsWith('image') ? URL.createObjectURL(file) : null,
+    }));
+    const pending = this._pendingItemId;
+    this._pendingItemId = null;
+    const items = pending
+      ? this.state.items.map(it => it.id === pending ? Object.assign({}, it, { fileId: newFiles[0].id }) : it)
+      : this.state.items;
+    this.setState({ files: [...this.state.files, ...newFiles], items, uploadError: false });
+    e.target.value = '';
+  }
+
+  removeFile(id) { this.setState({ files: this.state.files.filter(f => f.id !== id) }); }
+  dismissUploadError() { this.setState({ uploadError: false }); }
+
+  syncItemsToForm() {
+    const s = this.state;
+    if (!s.items || s.items.length === 0) return;
+    const total = s.items.reduce((sum, it) => sum + (parseFloat(String(it.amount).replace(/,/g, '')) || 0), 0);
+    const first = s.items[0];
+    const patch = { amount: this.roundMoney(total || first.amount || s.form.amount) };
+    const travelItems = s.items.filter(it => it.type === 'personal');
+    if (travelItems.length) {
+      patch.origin = travelItems[0].origin || s.form.origin;
+      patch.destination = travelItems[travelItems.length - 1].destination || s.form.destination;
+      patch.distance = String(travelItems.reduce((a, it) => a + (parseFloat(it.distance) || 0), 0));
+    }
+    this.setState({ form: Object.assign({}, s.form, patch) });
+  }
+
+  startExtraction() {
+    const s = this.state;
+    if (s.files.length === 0) return;
+    this.setState({ isExtracting: true });
+    setTimeout(() => {
+      const samples = [
+        { type: 'personal', origin: 'สำนักงานใหญ่ ถ.สาทร', destination: 'บมจ. ลูกค้า ABC ถ.สุขุมวิท', distance: '14', ratePerKm: '6', amount: '84.00' },
+        { type: 'toll', amount: '75.00' },
+        { type: 'public', origin: 'BTS อโศก', destination: 'BTS สยาม', amount: '44.00' },
+      ];
+      const items = this.state.files.map((f, i) => {
+        const base = this.blankItem(samples[i % samples.length].type);
+        return Object.assign(base, samples[i % samples.length], { fileId: f.id });
+      });
+      this.setState({ isExtracting: false, screen: 'ocr', items }, () => this.syncItemsToForm());
+    }, 1400);
+  }
+
+  ocrFieldConfig() {
+    const isTravel = this.state.items.some(it => it.type === 'personal');
+    const base = [{ key: 'date', label: 'วันที่', confidence: 'high' }];
+    if (isTravel) {
+      base.push(
+        { key: 'merchant', label: 'ผู้รับเงิน / คู่ค้า (จากภาพแผนที่)', confidence: 'medium' },
+        { key: 'origin', label: 'ต้นทาง', confidence: 'high' },
+        { key: 'destination', label: 'ปลายทาง', confidence: 'high' },
+        { key: 'distance', label: 'ระยะทาง (กม.)', confidence: 'medium' },
+      );
+    } else {
+      base.push({ key: 'merchant', label: 'ผู้รับเงิน / คู่ค้า', confidence: 'medium' });
+    }
+    base.push({ key: 'amount', label: 'จำนวนเงิน (บาท)', confidence: 'missing' });
+    return base;
+  }
+
+  badgeFor(confidence) {
+    const map = {
+      high: { label: 'ตรงกัน', style: 'color:var(--color-text);opacity:.5' },
+      medium: { label: 'โปรดตรวจสอบ', style: 'color:var(--color-accent-700)' },
+      missing: { label: 'กรุณากรอกข้อมูล', style: 'color:var(--color-accent-700);text-decoration:underline' },
+    };
+    return map[confidence] || map.high;
+  }
+
+  updateField(key, value) {
+    this.setState({ form: Object.assign({}, this.state.form, { [key]: value }) });
+  }
+
+  setPayment(p) { this.updateField('payment', p); }
+
+  empDown(e) {
+    this._empDrawing = true;
+    const ctx = this.empCanvasRef.current.getContext('2d');
+    ctx.beginPath();
+    ctx.moveTo(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
+  }
+  empMove(e) {
+    if (!this._empDrawing) return;
+    const ctx = this.empCanvasRef.current.getContext('2d');
+    ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = '#201e1d';
+    ctx.lineTo(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
+    ctx.stroke();
+  }
+  empUp() {
+    if (!this._empDrawing) return;
+    this._empDrawing = false;
+    this.setState({ employeeSignatureDrawn: true });
+  }
+  clearEmpSignature() {
+    const c = this.empCanvasRef.current;
+    if (c) c.getContext('2d').clearRect(0, 0, c.width, c.height);
+    this.setState({ employeeSignatureDrawn: false, signatureDataUrl: null });
+  }
+  useSampleSignatureUpload() {
+    const c = this.empCanvasRef.current;
+    if (c) {
+      const ctx = c.getContext('2d');
+      ctx.clearRect(0, 0, c.width, c.height);
+      ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = '#201e1d';
+      ctx.beginPath();
+      ctx.moveTo(30, 100); ctx.bezierCurveTo(60, 40, 90, 130, 130, 60);
+      ctx.bezierCurveTo(150, 30, 170, 90, 200, 70); ctx.bezierCurveTo(220, 55, 250, 100, 290, 65);
+      ctx.stroke();
+    }
+    this.setState({ employeeSignatureDrawn: true });
+  }
+  toggleConsent() { this.setState({ consentChecked: !this.state.consentChecked }); }
+
+  panDown(e) {
+    if (!this.state.a4Mode) return;
+    const el = e.currentTarget;
+    if (e.pointerType === 'touch' && this._touchCount > 1) return;
+    this._pan = { x: e.clientX, y: e.clientY, sl: el.scrollLeft, st: el.scrollTop, el };
+    el.style.cursor = 'grabbing';
+  }
+  panMove(e) {
+    const p = this._pan;
+    if (!p) return;
+    p.el.scrollLeft = p.sl - (e.clientX - p.x);
+    p.el.scrollTop = p.st - (e.clientY - p.y);
+  }
+  panUp() {
+    if (this._pan) { this._pan.el.style.cursor = ''; this._pan = null; }
+  }
+  touchStart(e) {
+    this._touchCount = e.touches.length;
+    if (e.touches.length === 2) {
+      this._pan = null;
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      this._pinch = { dist: Math.hypot(dx, dy), zoom: this.state.a4Zoom || 1 };
+    }
+  }
+  touchMove(e) {
+    if (e.touches.length === 2 && this._pinch) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.hypot(dx, dy);
+      const next = Math.min(3, Math.max(1, this._pinch.zoom * (dist / this._pinch.dist)));
+      if (Math.abs(next - (this.state.a4Zoom || 1)) > 0.01) this.setState({ a4Zoom: next });
+    }
+  }
+  touchEnd(e) {
+    this._touchCount = e.touches.length;
+    if (e.touches.length < 2) this._pinch = null;
+  }
+
+  goPreviewAfterSign() {
+    const c = this.empCanvasRef.current;
+    const signatureDataUrl = c ? c.toDataURL('image/png') : null;
+    this.setState({ screen: 'preview', a4Mode: false, a4Offsets: null, a4Height: 0, signatureDataUrl, signedAt: new Date().toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' }) });
+  }
+
+  restoreSignature() {
+    const c = this.empCanvasRef.current;
+    const url = this.state.signatureDataUrl;
+    if (!c || !url) return;
+    const img = new Image();
+    img.onload = () => { const ctx = c.getContext('2d'); ctx.clearRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0); };
+    img.src = url;
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    if (this.state.screen === 'sign' && prevState.screen !== 'sign' && this.state.signatureDataUrl) {
+      setTimeout(() => this.restoreSignature(), 0);
+    }
+  }
+
+  confirmEmployeeSignature() {
+    const s = this.state;
+    if (!s.employeeSignatureDrawn) return;
+    this.setState({ showSubmitConfirm: false });
+    const emp = this.employee();
+    const newDoc = {
+      id: 'd' + Date.now(), docNo: s.docNumber, employeeName: emp.name, employeeDept: emp.dept, employeePosition: emp.position,
+      typeLabel: s.expenseType ? s.expenseType.label : 'อื่น ๆ', amount: s.form.amount, date: s.form.date,
+      project: s.form.project, status: 'pending', description: s.form.description, reason: s.form.reason,
+      payment: s.form.payment, files: s.files.map(f => ({ name: f.name })), employeeId: emp.id,
+      signatureDataUrl: s.signatureDataUrl, signedAt: s.signedAt,
+      items: s.items.map(it => Object.assign({}, it, { fileName: (s.files.find(f => f.id === it.fileId) || {}).name })),
+      timeline: [
+        { action: 'สร้างเอกสาร', person: emp.name, role: 'พนักงาน', time: 'วันนี้' },
+        { action: 'ลงลายเซ็นและส่งอนุมัติ', person: emp.name, role: 'พนักงาน', time: 'วันนี้' },
+      ],
+    };
+    if (s.editingDocId) {
+      const docs = s.docs.map(d => d.id === s.editingDocId ? Object.assign({}, d, {
+        status: 'pending', correctionReason: null, amount: newDoc.amount, items: newDoc.items, files: newDoc.files,
+        signatureDataUrl: newDoc.signatureDataUrl, signedAt: newDoc.signedAt,
+        timeline: [...d.timeline, { action: 'แก้ไขและส่งอนุมัติอีกครั้ง', person: emp.name, role: 'ผู้จัดทำ', time: 'วันนี้' }],
+      }) : d);
+      this.setState({ docs, editingDocId: null, screen: 'success' });
+      return;
+    }
+    this.setState({ docs: [newDoc, ...s.docs], screen: 'success' });
+  }
+
+  backToDashboardReset() {
+    const s = this.state;
+    this.setState({
+      screen: 'dashboard', expenseType: null, files: [], docNumber: null, editingDocId: null,
+      employeeSignatureDrawn: false, consentChecked: false,
+      form: this.initialState().form, items: [],
+    });
+  }
+
+  editCorrectionDoc(doc) {
+    if (!doc) return;
+    const files = (doc.items || []).filter(it => it.fileName).map((it, i) => ({
+      id: 'rf' + i, name: it.fileName, isImage: /\.(jpg|jpeg|png|webp)$/i.test(it.fileName), isPdf: /\.pdf$/i.test(it.fileName), url: null,
+    }));
+    const items = (doc.items || []).map((it, i) => Object.assign({}, it, { fileId: it.fileName ? ('rf' + files.findIndex(f => f.name === it.fileName)) : null }));
+    this.setState({
+      role: 'employee', screen: 'ocr', editingDocId: doc.id, docNumber: doc.docNo, docViewer: false,
+      items, files, expenseType: { label: doc.typeLabel }, signatureDataUrl: null, employeeSignatureDrawn: false,
+      form: Object.assign({}, this.state.form, { amount: doc.amount, date: doc.date, project: doc.project }),
+    }, () => this.syncItemsToForm());
+  }
+
+  openDoc(id) { this.setState({ docViewer: false, screen: 'managerReview', activeDocId: id, showReasonPanel: false, showApproveConfirm: false, managerSignatureDrawn: false }); }
+  onManagerComment(e) { this.setState({ managerComment: e.target.value }); }
+
+  isSelfDoc() {
+    const d = this.state.docs.find(x => x.id === this.state.activeDocId);
+    return !!(d && d.employeeName === this.employee().name);
+  }
+  openCorrection() { if (this.isSelfDoc()) return; this.setState({ showReasonPanel: true, reasonMode: 'correction', selectedReason: null, otherReasonText: '' }); }
+  openReject() { if (this.isSelfDoc()) return; this.setState({ showReasonPanel: true, reasonMode: 'reject', selectedReason: null, otherReasonText: '' }); }
+  cancelReasonPanel() { this.setState({ showReasonPanel: false }); }
+  selectReason(r) { this.setState({ selectedReason: r }); }
+  submitReason() {
+    const s = this.state;
+    if (!s.selectedReason) return;
+    this.setState({ showReasonConfirm: false });
+    const reasonText = s.selectedReason === 'อื่นๆ' ? String(s.otherReasonText || '').trim() : s.selectedReason;
+    const status = s.reasonMode === 'correction' ? 'correction' : 'rejected';
+    const actionLabel = s.reasonMode === 'correction' ? 'ขอให้แก้ไข' : 'ไม่อนุมัติเอกสาร';
+    const docs = s.docs.map(d => d.id === s.activeDocId ? Object.assign({}, d, {
+      status, correctionReason: reasonText,
+      timeline: [...d.timeline, { action: actionLabel + ': ' + reasonText, person: this.employee().manager, role: 'หัวหน้างาน', time: 'วันนี้' }],
+    }) : d);
+    this.setState({ docs, showReasonPanel: false, screen: 'managerDashboard' });
+    this.showToast(s.reasonMode === 'correction' ? 'ส่งกลับให้พนักงานแก้ไขแล้ว' : 'ไม่อนุมัติเอกสารแล้ว');
+  }
+
+  openApprove() { if (this.isSelfDoc()) return; this.setState({ showApproveConfirm: true }); }
+  cancelApprove() { this.setState({ showApproveConfirm: false }); }
+  mgrDown(e) {
+    this._mgrDrawing = true;
+    const ctx = this.mgrCanvasRef.current.getContext('2d');
+    ctx.beginPath();
+    ctx.moveTo(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
+  }
+  mgrMove(e) {
+    if (!this._mgrDrawing) return;
+    const ctx = this.mgrCanvasRef.current.getContext('2d');
+    ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = '#201e1d';
+    ctx.lineTo(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
+    ctx.stroke();
+  }
+  mgrUp() {
+    if (!this._mgrDrawing) return;
+    this._mgrDrawing = false;
+    this.setState({ managerSignatureDrawn: true });
+  }
+  clearMgrSignature() {
+    const c = this.mgrCanvasRef.current;
+    if (c) c.getContext('2d').clearRect(0, 0, c.width, c.height);
+    this.setState({ managerSignatureDrawn: false });
+  }
+  confirmApprove() {
+    const s = this.state;
+    if (!s.managerSignatureDrawn || this.isSelfDoc()) return;
+    const mc = this.mgrCanvasRef.current;
+    const managerSignatureDataUrl = mc ? mc.toDataURL('image/png') : null;
+    const approvedAt = new Date().toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' });
+    const docs = s.docs.map(d => d.id === s.activeDocId ? Object.assign({}, d, {
+      status: 'approved', managerSignatureDataUrl, approvedAt, approvedBy: this.employee().name,
+      timeline: [...d.timeline, { action: 'อนุมัติเอกสาร', person: this.employee().manager, role: 'หัวหน้างาน', time: approvedAt }],
+    }) : d);
+    this.setState({ docs, showApproveConfirm: false, screen: 'managerDashboard' });
+    this.showToast('อนุมัติเอกสารแล้ว');
+  }
+
+  renderVals() {
+    const s = this.state;
+    const employee = this.employee();
+
+    const decorateDoc = (d) => {
+      const meta = this.statusMeta(d.status);
+      const positions = { 'ณัฐวุฒิ ศรีสุข': 'เจ้าหน้าที่ขายอาวุโส', 'ปิยะดา รักเรียน': 'เจ้าหน้าที่การตลาด', 'ศศิธร แซ่ตั้ง': 'เจ้าหน้าที่บัญชี' };
+      return Object.assign({}, d, { employeePosition: d.employeePosition || positions[d.employeeName] || '', statusLabel: meta.label, statusStyle: meta.style, statusIcon: meta.alert ? this.alertIcon() : null, open: () => this.openDoc(d.id) });
+    };
+
+    const allMyDocs = s.docs.filter(d => d.employeeName === employee.name).map(decorateDoc);
+    const myDocs = (s.docFilter ? allMyDocs.filter(d => d.status === s.docFilter) : allMyDocs).slice(0, 10);
+    const mgrPendingDocs = s.docs.filter(d => d.status === 'pending' && d.employeeName !== employee.name).map(decorateDoc);
+    const THAI_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+    const THAI_FULL = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+    const docMonth = (d) => {
+      const iso = (d.items || []).map(it => it.date).find(Boolean);
+      if (iso) { const m = String(iso).match(/^(\d{4})-(\d{2})/); if (m) return m[1] + '-' + m[2]; }
+      const t = String(d.date || '').match(/(\d{1,2})\s+(\S+)\s+(\d{4})/);
+      if (t) {
+        const mi = THAI_MONTHS.indexOf(t[2]);
+        if (mi >= 0) return (parseInt(t[3], 10) - 543) + '-' + String(mi + 1).padStart(2, '0');
+      }
+      return null;
+    };
+    const money = (n) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const approvedDocs = s.docs.filter(d => d.status === 'approved' && d.employeeName !== employee.name && (!d.approvedBy || d.approvedBy === employee.name));
+    const now = new Date();
+    const latestOffset = (() => {
+      const keys = approvedDocs.map(docMonth).filter(Boolean).sort();
+      if (!keys.length) return 0;
+      const p = keys[keys.length - 1].split('-');
+      const off = (parseInt(p[0], 10) - now.getFullYear()) * 12 + (parseInt(p[1], 10) - 1 - now.getMonth());
+      return Math.min(0, off);
+    })();
+    const monthOffset = s.monthOffset === undefined || s.monthOffset === null ? latestOffset : s.monthOffset;
+    const base = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+    const keyOf = (dt) => dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0');
+    const sumFor = (key) => approvedDocs.filter(d => docMonth(d) === key)
+      .reduce((a, d) => a + (parseFloat(String(d.amount).replace(/,/g, '')) || 0), 0);
+    const selKey = keyOf(base);
+    const monthLabel = THAI_FULL[base.getMonth()] + ' ' + (base.getFullYear() + 543);
+    const monthDocs = approvedDocs.filter(d => docMonth(d) === selKey);
+    const monthSum = monthDocs.reduce((a, d) => a + (parseFloat(String(d.amount).replace(/,/g, '')) || 0), 0);
+    const monthTotal = money(monthSum);
+    const monthCount = monthDocs.length;
+    const monthAverage = money(monthCount ? monthSum / monthCount : 0);
+    const trendKeys = [];
+    for (let i = 5; i >= 0; i--) { const dt = new Date(now.getFullYear(), now.getMonth() + monthOffset - i, 1); trendKeys.push(dt); }
+    const trendVals = trendKeys.map(dt => sumFor(keyOf(dt)));
+    const trendMax = Math.max.apply(null, trendVals.concat([1]));
+    const monthTrend = trendKeys.map((dt, i) => {
+      const isSel = keyOf(dt) === selKey;
+      const h = Math.max(3, Math.round((trendVals[i] / trendMax) * 32));
+      return {
+        label: THAI_FULL[dt.getMonth()] + ' ฿' + money(trendVals[i]),
+        short: THAI_MONTHS[dt.getMonth()],
+        barStyle: 'height:' + h + 'px;background:' + (isSel ? 'var(--color-accent)' : 'var(--color-neutral-300)'),
+        labelStyle: isSel ? 'font-weight:800;opacity:.9' : 'opacity:.45',
+        select: () => this.setState({ monthOffset: monthOffset - (5 - i) }),
+      };
+    });
+    const rowMap = {};
+    monthDocs.forEach(d => {
+      const k = d.employeeName;
+      rowMap[k] = rowMap[k] || { name: k, count: 0, sum: 0 };
+      rowMap[k].count += 1;
+      rowMap[k].sum += parseFloat(String(d.amount).replace(/,/g, '')) || 0;
+    });
+    const yearDocs = approvedDocs.filter(d => { const k = docMonth(d); return k && k.slice(0, 4) === String(base.getFullYear()); });
+    this._lastMonthOffset = monthOffset;
+    const monthRows = Object.values(rowMap).sort((a, b) => b.sum - a.sum).map(r => ({ name: r.name, count: r.count, amount: money(r.sum) }));
+
+    const activeDocRaw = s.docs.find(d => d.id === s.activeDocId) || null;
+    const activeDoc = activeDocRaw ? decorateDoc(activeDocRaw) : { docNo: '', employeeName: '', employeeDept: '', typeLabel: '', date: '', project: '', payment: '', reason: '', description: '', amount: '0', statusLabel: '', statusStyle: '', timeline: [], correctionReason: '' };
+
+    const cfg = this.ocrFieldConfig();
+    const ocrFields = cfg.map(c => {
+      const b = this.badgeFor(c.confidence);
+      return { key: c.key, label: c.label, value: s.form[c.key] || '', badgeLabel: b.label, badgeStyle: b.style, onChange: (e) => this.updateField(c.key, e.target.value) };
+    });
+
+    const reasonList = ['จำนวนเงินไม่ถูกต้อง', 'แนบเอกสารไม่ถูกต้อง', 'แนบเอกสารไม่ครบ', 'เหตุผลไม่ชัดเจน', 'อื่นๆ'];
+    const reasonOptions = reasonList.map(r => ({
+      label: r, select: () => this.selectReason(r),
+      style: s.selectedReason === r ? 'border-color:var(--color-text);background:var(--color-neutral-200)' : 'border-color:var(--color-divider)',
+    }));
+
+    const paymentStyle = (p) => s.form.payment === p ? { background: 'var(--color-text)', color: '#fff' } : {};
+    const a4Scale = ((s.a4Avail || 326) / 794) * (s.a4Zoom || 1);
+    const PAGE_H = 1123, PAGE_PAD = 48, INNER_H = PAGE_H - PAGE_PAD * 2;
+    const contentH = s.a4Height || INNER_H;
+    const offsets = (s.a4Mode && s.a4Offsets && s.a4Offsets.length) ? s.a4Offsets : [0];
+    const pageCount = s.a4Mode ? offsets.length : 1;
+    const certOn = !!s.a4Mode && s.certForm !== false;
+    const certOffsets = (certOn && s.certOffsets && s.certOffsets.length) ? s.certOffsets : [0];
+    const certPageCount = certOn ? certOffsets.length : 0;
+    const CERT_PAD = 56, CERT_INNER = PAGE_H - CERT_PAD * 2;
+    const measureCert = (el) => {
+      if (!el || !this.state.a4Mode) return;
+      const base = el.getBoundingClientRect();
+      const scale = (base.width / el.offsetWidth) || 1;
+      const blocks = Array.from(el.querySelectorAll('[data-cbrk]')).map(n => {
+        const r = n.getBoundingClientRect();
+        return { top: (r.top - base.top) / scale, bottom: (r.bottom - base.top) / scale };
+      });
+      if (!blocks.length) return;
+      const total = el.offsetHeight;
+      const starts = [0];
+      let start = 0;
+      blocks.forEach(b => {
+        if (b.bottom - start > CERT_INNER && b.top > start) { starts.push(b.top); start = b.top; }
+      });
+      if (JSON.stringify(starts) !== JSON.stringify(this.state.certOffsets || []) || Math.abs((this.state.certHeight || 0) - total) > 2) {
+        this.setState({ certOffsets: starts, certHeight: total });
+      }
+    };
+    const certPages = Array.from({ length: certPageCount }, (_, i) => {
+      const from = certOffsets[i] || 0;
+      const to = (i + 1 < certOffsets.length) ? certOffsets[i + 1] : (s.certHeight || CERT_INNER);
+      return {
+        pageStyle: { width: 794, height: PAGE_H, padding: CERT_PAD, boxSizing: 'border-box', background: '#fff', border: '1px solid var(--color-divider)', boxShadow: 'var(--shadow-md)', flexShrink: 0, fontFamily: "'Angsana New','AngsanaUPC','TH Sarabun New',serif", color: '#000' },
+        clipStyle: { height: Math.min(CERT_INNER, Math.max(0, to - from)), overflow: 'hidden' },
+        contentStyle: { marginTop: -from, position: 'relative', display: 'flex', flexDirection: 'column', minHeight: CERT_INNER },
+        contentRef: i === 0 ? measureCert : null,
+      };
+    });
+    const totalSheets = pageCount + certPageCount;
+    const a4TotalH = totalSheets * PAGE_H + (totalSheets - 1) * 16;
+    const measure = (el) => {
+      if (!el || !this.state.a4Mode) return;
+      const base = el.getBoundingClientRect();
+      const scale = (base.width / el.offsetWidth) || 1;
+      const nodes = Array.from(el.querySelectorAll('[data-brk]'));
+      const blocks = nodes.map(n => {
+        const r = n.getBoundingClientRect();
+        return { top: (r.top - base.top) / scale, bottom: (r.bottom - base.top) / scale };
+      });
+      if (!blocks.length) return;
+      const total = el.offsetHeight;
+      const starts = [0];
+      let start = 0;
+      blocks.forEach(b => {
+        if (b.bottom - start > INNER_H + 2 && b.top > start) { starts.push(b.top); start = b.top; }
+      });
+      const changed = JSON.stringify(starts) !== JSON.stringify(this.state.a4Offsets || []) || Math.abs((this.state.a4Height || 0) - total) > 2;
+      if (changed) this.setState({ a4Offsets: starts, a4Height: total });
+    };
+    const a4Pages = Array.from({ length: pageCount }, (_, i) => {
+      const from = offsets[i] || 0;
+      const to = (i + 1 < offsets.length) ? offsets[i + 1] : contentH;
+      return {
+        index: i,
+        pageStyle: s.a4Mode
+          ? { width: 794, height: PAGE_H, padding: PAGE_PAD, boxSizing: 'border-box', background: '#fff', border: '1px solid var(--color-divider)', boxShadow: 'var(--shadow-md)', flexShrink: 0 }
+          : { border: '1px solid var(--color-divider)', padding: 18 },
+        clipStyle: s.a4Mode ? { height: Math.min(INNER_H, Math.max(0, to - from)), overflow: 'hidden' } : {},
+        contentStyle: s.a4Mode ? { marginTop: -from, position: 'relative' } : {},
+        contentRef: i === 0 ? measure : null,
+      };
+    });
+
+    const typeMeta = this.itemTypeMeta();
+    const itemsDisplay = s.items.map(it => ({
+      id: it.id, origin: it.origin, destination: it.destination, distance: it.distance, amount: it.amount, ratePerKm: it.ratePerKm, date: it.date,
+      isPersonal: it.type === 'personal',
+      isToll: it.type === 'toll',
+      isPublic: it.type === 'public',
+      onDate: (e) => this.updateItemField(it.id, 'date', e.target.value),
+      editableStyle: { background: '#fff' },
+      readonlyStyle: { background: 'var(--color-neutral-200)', color: 'var(--color-text)' },
+      inlineDateStyle: { background: '#fff', padding: '5px 8px', fontSize: 13, width: 150 },
+      inlineWideStyle: { background: '#fff', padding: '5px 8px', fontSize: 13, flex: 1, minWidth: 110 },
+      inlineNumStyle: { background: '#fff', padding: '5px 8px', fontSize: 13, width: 90 },
+      inlineNumReadonlyStyle: { background: 'var(--color-neutral-200)', padding: '5px 8px', fontSize: 13, width: 90, cursor: 'not-allowed' },
+      hasRoute: it.type === 'personal' || it.type === 'public',
+      dateDisplay: this.formatThaiDate(it.date),
+      blockInputStyle: { background: '#fff', padding: '7px 9px', fontSize: 13, width: '100%' },
+      blockReadonlyStyle: { background: 'var(--color-neutral-200)', padding: '7px 9px', fontSize: 13, width: '100%', cursor: 'not-allowed' },
+      purpose: it.purpose,
+      onPurpose: (e) => this.updateItemField(it.id, 'purpose', e.target.value),
+      attachment: this.attachmentFor(it.fileId, false, it.id),
+      onOrigin: (e) => this.updateItemField(it.id, 'origin', e.target.value),
+      onDestination: (e) => this.updateItemField(it.id, 'destination', e.target.value),
+      onDistance: (e) => this.updateItemField(it.id, 'distance', e.target.value),
+      onRate: (e) => this.updateItemField(it.id, 'ratePerKm', e.target.value),
+      onAmount: (e) => this.updateItemField(it.id, 'amount', e.target.value),
+      onAmountBlur: () => this.formatItemAmount(it.id),
+      remove: () => this.removeItem(it.id),
+      removeOpacity: 1,
+      amountFieldStyle: it.type === 'personal' ? { background: 'var(--color-neutral-200)', cursor: 'not-allowed' } : { background: '#fff' },
+      typeLabel: typeMeta[it.type] || it.type,
+    }));
+    const totalAmount = s.items.reduce((sum, it) => sum + (parseFloat(String(it.amount).replace(/,/g, '')) || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const sItems = (activeDocRaw && activeDocRaw.items && activeDocRaw.items.length) ? activeDocRaw.items : [];
+    const sA4 = !!s.sA4Mode;
+    const sCertOn = sA4 && s.sCertForm !== false;
+    const sScale = ((s.a4Avail || 326) / 794) * (s.sA4Zoom || 1);
+    const sTotalNum = sItems.reduce((a, it) => a + (parseFloat(String(it.amount).replace(/,/g, '')) || 0), 0);
+    const sTotal = sTotalNum ? sTotalNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : (activeDocRaw ? activeDocRaw.amount : '0');
+    const mkMeasure = (offKey, hKey, inner) => (el) => {
+      if (!el || !this.state.sA4Mode) return;
+      const base = el.getBoundingClientRect();
+      const sc = (base.width / el.offsetWidth) || 1;
+      const sel = offKey === 'sCertOffsets' ? '[data-scbrk]' : '[data-sbrk]';
+      const blocks = Array.from(el.querySelectorAll(sel)).map(n => {
+        const r = n.getBoundingClientRect();
+        return { top: (r.top - base.top) / sc, bottom: (r.bottom - base.top) / sc };
+      });
+      if (!blocks.length) return;
+      const total = el.offsetHeight;
+      const starts = [0];
+      let start = 0;
+      blocks.forEach(b => { if (b.bottom - start > inner + 2 && b.top > start) { starts.push(b.top); start = b.top; } });
+      if (JSON.stringify(starts) !== JSON.stringify(this.state[offKey] || []) || Math.abs((this.state[hKey] || 0) - total) > 2) {
+        this.setState({ [offKey]: starts, [hKey]: total });
+      }
+    };
+    const mkPages = (offsets, heightVal, pad, inner, measure) => offsets.map((from, i) => {
+      const to = (i + 1 < offsets.length) ? offsets[i + 1] : (heightVal || inner);
+      return {
+        pageStyle: sA4
+          ? { width: 794, height: PAGE_H, padding: pad, boxSizing: 'border-box', background: '#fff', border: '1px solid var(--color-divider)', boxShadow: 'var(--shadow-md)', flexShrink: 0, fontFamily: pad === 56 ? "'Angsana New','AngsanaUPC','TH Sarabun New',serif" : undefined, color: pad === 56 ? '#000' : undefined }
+          : { border: '1px solid var(--color-divider)', padding: 18 },
+        clipStyle: sA4 ? { height: Math.min(inner, Math.max(0, to - from)), overflow: 'hidden' } : {},
+        contentStyle: sA4 ? { marginTop: -from, position: 'relative', display: 'flex', flexDirection: 'column', minHeight: inner } : {},
+        contentRef: i === 0 ? measure : null,
+      };
+    });
+    const sDocOffsets = (sA4 && s.sDocOffsets && s.sDocOffsets.length) ? s.sDocOffsets : [0];
+    const sCertOffsets = (sCertOn && s.sCertOffsets && s.sCertOffsets.length) ? s.sCertOffsets : [0];
+    const sSheetCount = (sA4 ? sDocOffsets.length : 1) + (sCertOn ? sCertOffsets.length : 0);
+    const sAttach = (it) => {
+      if (!it.fileName) return null;
+      return React.createElement('div', { style: { border: '1px solid var(--color-divider)', padding: '5px 8px', fontSize: 10, overflow: 'hidden', textOverflow: 'ellipsis' } }, it.fileName);
+    };
+
+    return {
+      role: s.role, screen: s.screen,
+      s_toggleCertForm: () => this.setState({ sCertForm: !(s.sCertForm !== false), sCertOffsets: null, sCertHeight: 0, sDocOffsets: null, sDocHeight: 0 }),
+      s_certBoxStyle: (s.sCertForm !== false)
+        ? { width: 16, height: 16, border: '1px solid var(--color-text)', background: 'var(--color-accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, fontSize: 11, fontWeight: 800 }
+        : { width: 16, height: 16, border: '1px solid var(--color-divider)', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, fontSize: 11, fontWeight: 800 },
+      s_certMark: (s.sCertForm !== false) ? '✓' : '',
+      s_toggleA4: () => this.setState({ sA4Mode: !s.sA4Mode, sCertOffsets: null, sCertHeight: 0, sDocOffsets: null, sDocHeight: 0 }),
+      s_a4TrackStyle: { position: 'relative', width: 34, height: 18, border: '1px solid var(--color-divider)', background: sA4 ? 'var(--color-accent-100)' : 'var(--color-neutral-200)', cursor: 'pointer', flexShrink: 0 },
+      s_a4KnobStyle: { position: 'absolute', top: 2, left: sA4 ? 18 : 2, width: 14, height: 14, background: sA4 ? 'var(--color-accent)' : 'var(--color-neutral-500)', transition: 'left .15s' },
+      s_previewScrollRef: (el) => {
+        if (!el) return;
+        const cs = getComputedStyle(el);
+        const avail = el.clientWidth - parseFloat(cs.paddingLeft || 0) - parseFloat(cs.paddingRight || 0);
+        if (avail > 0 && Math.abs((this.state.a4Avail || 0) - avail) > 1) this.setState({ a4Avail: avail });
+      },
+      s_panDown: (e) => {
+        if (!this.state.sA4Mode) return;
+        const el = e.currentTarget;
+        if (e.pointerType === 'touch' && this._touchCount > 1) return;
+        this._pan = { x: e.clientX, y: e.clientY, sl: el.scrollLeft, st: el.scrollTop, el };
+        el.style.cursor = 'grabbing';
+      },
+      s_panMove: (e) => this.panMove(e),
+      s_panUp: () => this.panUp(),
+      s_touchStart: (e) => {
+        this._touchCount = e.touches.length;
+        if (e.touches.length === 2) {
+          this._pan = null;
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          this._pinch = { dist: Math.hypot(dx, dy), zoom: this.state.sA4Zoom || 1 };
+        }
+      },
+      s_touchMove: (e) => {
+        if (e.touches.length === 2 && this._pinch) {
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          const next = Math.min(3, Math.max(1, this._pinch.zoom * (Math.hypot(dx, dy) / this._pinch.dist)));
+          if (Math.abs(next - (this.state.sA4Zoom || 1)) > 0.01) this.setState({ sA4Zoom: next });
+        }
+      },
+      s_touchEnd: (e) => this.touchEnd(e),
+      isDocViewer: !!s.docViewer,
+      openDocViewer: () => this.setState({ docViewer: true, sA4Mode: true, sA4Zoom: 1, sCertOffsets: null, sCertHeight: 0, sDocOffsets: null, sDocHeight: 0 }),
+      closeDocViewer: () => this.setState({ docViewer: false }),
+      s_previewScrollStyle: { flex: 1, minHeight: 0, overflow: 'auto', cursor: sA4 ? 'grab' : 'default', touchAction: sA4 ? 'pan-x pan-y pinch-zoom' : 'auto' },
+      s_a4Mode: sA4,
+      s_a4ZoomLabel: Math.round((s.sA4Zoom || 1) * 100) + '%',
+      s_zoomIn: () => this.setState({ sA4Zoom: Math.min(3, (this.state.sA4Zoom || 1) + 0.25) }),
+      s_zoomOut: () => this.setState({ sA4Zoom: Math.max(1, (this.state.sA4Zoom || 1) - 0.25) }),
+      s_canDownload: !(activeDocRaw && (activeDocRaw.status === 'correction' || activeDocRaw.status === 'rejected')),
+      showApprovalActions: !!(activeDocRaw && activeDocRaw.status === 'pending' && s.role === 'manager' && activeDocRaw.employeeName !== employee.name),
+      isOwnDocAsApprover: !!(activeDocRaw && s.role === 'manager' && activeDocRaw.employeeName === employee.name),
+      showEditCorrection: !!(activeDocRaw && activeDocRaw.status === 'correction' && s.role !== 'manager'),
+      editCorrectionDoc: () => this.editCorrectionDoc(activeDocRaw),
+      s_downloadPdf: () => {
+        this.showToast('กำลังสร้างไฟล์ PDF · ' + (activeDoc.docNo || ''));
+        setTimeout(() => this.showToast('ดาวน์โหลดเอกสารแล้ว · ' + (activeDoc.docNo || '') + '.pdf'), 1400);
+      },
+      s_docSheetWrapStyle: sA4 ? { height: (sSheetCount * PAGE_H + (sSheetCount - 1) * 16) * sScale, width: 794 * sScale } : {},
+      s_docPagesStyle: sA4 ? { width: 794, transform: 'scale(' + sScale + ')', transformOrigin: 'top left', display: 'flex', flexDirection: 'column', gap: 16 } : {},
+      s_showCertPage: sCertOn,
+      s_certPages: sCertOn ? mkPages(sCertOffsets, s.sCertHeight, 56, PAGE_H - 112, mkMeasure('sCertOffsets', 'sCertHeight', PAGE_H - 112)) : [],
+      s_a4Pages: mkPages(sA4 ? sDocOffsets : [0], s.sDocHeight, 48, PAGE_H - 96, mkMeasure('sDocOffsets', 'sDocHeight', PAGE_H - 96)),
+      s_certRows: sItems.map((it, i) => ({
+        no: i + 1,
+        date: this.formatThaiDate(it.date),
+        amount: this.roundMoney(it.amount),
+        detail: it.type === 'toll' ? 'ค่าผ่านทางพิเศษ' : ((it.type === 'personal' ? 'ค่าเดินทาง' : 'ค่าโดยสาร') + (it.purpose || '') + ' จาก' + (it.origin || '') + 'ไป' + (it.destination || '')),
+        note: '',
+      })),
+      s_certBlankRows: [],
+      s_amountWords: this.thaiBahtText(sTotal),
+      s_totalAmount: sTotal,
+      s_certFrom: sItems.length ? this.formatThaiDate(sItems[0].date) : '',
+      s_certTo: sItems.length ? this.formatThaiDate(sItems[sItems.length - 1].date) : '',
+      s_signatureImg: activeDocRaw && activeDocRaw.signatureDataUrl
+        ? React.createElement('img', { src: activeDocRaw.signatureDataUrl, style: { width: '100%', maxHeight: 44, objectFit: 'contain', objectPosition: 'center', display: 'block', margin: '0 auto' } })
+        : React.createElement('span', { style: { fontFamily: "'Segoe Script',cursive", fontSize: 18 } }, activeDoc.employeeName || ''),
+      s_docHeaderExtra: sA4 ? 'flex-direction:row' : 'flex-direction:column',
+      s_docNumBlockStyle: sA4 ? { textAlign: 'right', flexShrink: 0 } : { marginTop: 10 },
+      s_docNumber: activeDoc.docNo,
+      s_empName: activeDoc.employeeName,
+      s_empPosition: activeDoc.employeePosition,
+      s_empId: (activeDocRaw && activeDocRaw.employeeId) || ({ 'ณัฐวุฒิ ศรีสุข': 'EMP-10234', 'ปิยะดา รักเรียน': 'EMP-10488', 'ศศิธร แซ่ตั้ง': 'EMP-10502' })[activeDoc.employeeName] || '',
+      s_manager: employee.manager,
+      s_docDate: activeDoc.date,
+      s_previewItems: sItems.map(it => ({
+        typeLabel: (this.itemTypeMeta()[it.type] || it.type),
+        dateDisplay: this.formatThaiDate(it.date),
+        origin: it.origin, destination: it.destination, distance: it.distance, ratePerKm: it.ratePerKm,
+        purpose: it.purpose, amount: it.amount,
+        isPersonal: it.type === 'personal',
+        hasRoute: it.type === 'personal' || it.type === 'public',
+        attachment: sAttach(it),
+      })),
+      s_previewRowStyle: sA4
+        ? { border: '1px solid var(--color-divider)', padding: 14, display: 'flex', gap: 16, alignItems: 'flex-start' }
+        : { border: '1px solid var(--color-divider)', padding: 10, display: 'flex', gap: 10 },
+      s_previewAttachStyle: sA4 ? { width: '35%', flexShrink: 0 } : { width: 75, flexShrink: 0 },
+      s_previewTextStyle: sA4
+        ? { flex: 1, minWidth: 0, fontSize: 13, display: 'flex', flexDirection: 'column', gap: 4 }
+        : { flex: 1, minWidth: 0, fontSize: 11.5, lineHeight: 1.55, display: 'flex', flexDirection: 'column', gap: 2 },
+      s_showDocSignature: !sA4,
+      s_hasSignature: !!activeDocRaw,
+      s_noSignature: !activeDocRaw,
+      s_signedAt: 'ลงนามแล้ว · ' + (activeDocRaw && activeDocRaw.signedAt ? activeDocRaw.signedAt : activeDoc.date),
+      s_approverSigned: !!(activeDocRaw && activeDocRaw.status === 'approved'),
+      s_approverPending: !(activeDocRaw && activeDocRaw.status === 'approved'),
+      s_approverStatusText: (activeDocRaw && activeDocRaw.status === 'rejected') ? 'ไม่อนุมัติ' : ((activeDocRaw && activeDocRaw.status === 'correction') ? 'ส่งกลับให้แก้ไข' : 'รอการอนุมัติ'),
+      s_approverSignedAt: 'อนุมัติแล้ว · ' + ((activeDocRaw && activeDocRaw.approvedAt) || (() => {
+        const tl = activeDocRaw && activeDocRaw.timeline ? activeDocRaw.timeline.filter(t => t.role === 'หัวหน้างาน') : [];
+        return tl.length ? tl[tl.length - 1].time : (activeDoc.date || '');
+      })()),
+      s_approverImg: (activeDocRaw && activeDocRaw.managerSignatureDataUrl)
+        ? React.createElement('img', { src: activeDocRaw.managerSignatureDataUrl, style: { width: '100%', maxHeight: 40, objectFit: 'contain', objectPosition: 'left', display: 'block' } })
+        : React.createElement('span', { style: { fontFamily: "'Segoe Script',cursive", fontSize: 18 } }, employee.manager),
+      s_certApproverImg: (activeDocRaw && activeDocRaw.status === 'approved')
+        ? (activeDocRaw.managerSignatureDataUrl
+            ? React.createElement('img', { src: activeDocRaw.managerSignatureDataUrl, style: { width: '100%', maxHeight: 23, objectFit: 'contain', objectPosition: 'center', display: 'block', margin: '0 auto' } })
+            : React.createElement('span', { style: { fontFamily: "'Segoe Script',cursive", fontSize: 17 } }, employee.manager))
+        : '\u00a0',
+      isLogin: s.screen === 'login', isDashboard: s.screen === 'dashboard', isCreate: s.screen === 'create',
+      isUpload: s.screen === 'upload', isOcr: s.screen === 'ocr', isDetails: s.screen === 'details',
+      isPreview: s.screen === 'preview', isSign: s.screen === 'sign', isSuccess: s.screen === 'success',
+      isManagerDash: s.screen === 'managerDashboard', isManagerReview: s.screen === 'managerReview',
+      employee,
+      empBtnBg: s.role === 'employee' ? 'var(--color-text)' : 'transparent',
+      empBtnColor: s.role === 'employee' ? '#fff' : 'var(--color-text)',
+      mgrBtnBg: s.role === 'manager' ? 'var(--color-text)' : 'transparent',
+      mgrBtnColor: s.role === 'manager' ? '#fff' : 'var(--color-text)',
+      account: this.account(),
+      canSwitchRole: this.account().roles.indexOf('requester') >= 0 && this.account().roles.indexOf('approver') >= 0,
+      switchToManager: () => this.switchToManager(),
+      switchToEmployee: () => this.switchToEmployee(),
+      resetDemo: () => this.resetDemo(),
+      doLogin: () => this.doLogin(),
+      goDashboard: () => this.goDashboard(),
+      goCreate: () => this.goCreate(),
+      goUpload: () => this.goUpload(),
+      goOcr: () => this.goOcr(),
+      goDetails: () => this.goDetails(),
+      goDetailsFromOcr: () => this.goDetailsFromOcr(),
+      goPreview: () => this.goPreview(),
+      goSignFromPreview: () => this.goSignFromPreview(),
+      goPreviewAfterSign: () => this.goPreviewAfterSign(),
+      notImplemented: () => this.notImplemented(),
+      myDocs, hasMyDocs: myDocs.length > 0, noMyDocs: myDocs.length === 0,
+      pendingCount: allMyDocs.filter(d => d.status === 'pending').length,
+      correctionCount: allMyDocs.filter(d => d.status === 'correction').length,
+      hasCorrections: allMyDocs.filter(d => d.status === 'correction').length > 0,
+      signOut: () => this.signOut(),
+      togglePendingFilter: () => this.toggleDocFilter('pending'),
+      toggleCorrectionFilter: () => this.toggleDocFilter('correction'),
+      pendingCardStyle: s.docFilter === 'pending' ? { cursor: 'pointer', border: '2px solid var(--color-text)', padding: 13 } : { cursor: 'pointer', border: '1px solid var(--color-divider)', padding: 14 },
+      correctionCardStyle: s.docFilter === 'correction' ? { cursor: 'pointer', border: '2px solid var(--color-accent-700)', padding: 13, background: 'var(--color-accent-100)' } : { cursor: 'pointer', border: '1px solid var(--color-accent-300)', padding: 14, background: 'var(--color-accent-100)' },
+      expenseTypes: this.expenseTypeList(),
+      expenseTypeLabel: s.expenseType ? s.expenseType.label : '',
+      uploadError: s.uploadError,
+      dismissUploadError: () => this.dismissUploadError(),
+      triggerFilePicker: () => this.triggerFilePicker(),
+      fileInputRef: this.fileInputRef,
+      onFilesSelected: (e) => this.onFilesSelected(e),
+      files: s.files.map(f => ({
+        id: f.id, name: f.name,
+        thumb: (f.isImage && f.url)
+          ? React.createElement('img', { src: f.url, style: { width: 40, height: 40, objectFit: 'cover', flexShrink: 0 } })
+          : React.createElement('div', { style: { width: 40, height: 40, background: 'var(--color-neutral-200)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 } },
+              React.createElement('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', dangerouslySetInnerHTML: { __html: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>' } })),
+        remove: () => this.removeFile(f.id),
+      })),
+      hasFiles: s.files.length > 0,
+      items: itemsDisplay,
+      hasItems: s.items.length > 0,
+      totalAmount,
+      singleItem: false,
+      ocrConfirmDisabled: s.items.length === 0 || s.items.some(it => !String(it.amount).trim() || !(parseFloat(String(it.amount).replace(/,/g, '')) > 0)),
+      showAddMenu: s.showAddMenu,
+      toggleAddMenu: () => this.toggleAddMenu(),
+      showUploadMenu: s.showUploadMenu,
+      toggleUploadMenu: () => this.toggleUploadMenu(),
+      pickCamera: () => this.triggerFilePicker('camera'),
+      pickGallery: () => this.triggerFilePicker('gallery'),
+      pickFile: () => this.triggerFilePicker('file'),
+      travelSubTypes: this.travelSubTypes().map(t => ({ label: t.label, addSelect: () => this.addItem(t.id) })),
+      uploadDisabled: s.isExtracting || s.files.length === 0,
+      extractLabel: s.isExtracting ? 'ระบบกำลังอ่านข้อมูล...' : 'ยืนยัน',
+      startExtraction: () => this.startExtraction(),
+      ocrFields,
+      isTaxiType: !!s.expenseType && (s.expenseType.id === 'taxi' || s.expenseType.id === 'travel' || s.expenseType.id === 'toll'),
+      isTravelOnlyType: s.items.some(it => it.type === 'personal'),
+      isRouteType: !!s.expenseType && (s.expenseType.id === 'taxi' || s.expenseType.id === 'travel' || s.expenseType.id === 'toll'),
+      routeTypeNote: 'เลือกประเภทค่าเดินทางของแต่ละรายการด้านล่าง แล้วแนบภาพหน้าจอแผนที่ประกอบ',
+      form: s.form,
+      onField_project: (e) => this.updateField('project', e.target.value),
+      onField_origin: (e) => this.updateField('origin', e.target.value),
+      onField_destination: (e) => this.updateField('destination', e.target.value),
+      onField_distance: (e) => this.updateField('distance', e.target.value),
+      onField_amount: (e) => this.updateField('amount', e.target.value),
+      onField_reason: (e) => this.updateField('reason', e.target.value),
+      onField_description: (e) => this.updateField('description', e.target.value),
+      setPaymentCash: () => this.setPayment('เงินสด'),
+      setPaymentTransfer: () => this.setPayment('โอนเงิน'),
+      setPaymentCredit: () => this.setPayment('บัตรเครดิต'),
+      paymentCashStyle: paymentStyle('เงินสด'),
+      paymentTransferStyle: paymentStyle('โอนเงิน'),
+      paymentCreditStyle: paymentStyle('บัตรเครดิต'),
+      docNumber: s.docNumber,
+      amountWords: this.thaiBahtText(s.form.amount),
+      empCanvasRefTpl: this.empCanvasRef,
+      mgrCanvasRefTpl: this.mgrCanvasRef,
+      empDown: (e) => this.empDown(e), empMove: (e) => this.empMove(e), empUp: () => this.empUp(),
+      clearEmpSignature: () => this.clearEmpSignature(),
+      useSampleSignatureUpload: () => this.useSampleSignatureUpload(),
+      consentChecked: s.consentChecked,
+      toggleConsent: () => this.toggleConsent(),
+      signDisabled: !s.employeeSignatureDrawn,
+      hasSignature: !!s.signatureDataUrl,
+      noSignature: !s.signatureDataUrl,
+      signatureImg: s.signatureDataUrl ? React.createElement('img', { src: s.signatureDataUrl, style: { width: '100%', maxHeight: 44, objectFit: 'contain', objectPosition: 'center', display: 'block', margin: '0 auto' } }) : null,
+      signedAt: s.signedAt || '',
+      a4Mode: !!s.a4Mode,
+      a4Scale,
+      certForm: s.certForm !== false,
+      showCertPage: !!s.a4Mode && s.certForm !== false,
+      toggleCertForm: () => this.setState({ certForm: !(this.state.certForm !== false), a4Offsets: null, a4Height: 0, certOffsets: null, certHeight: 0 }),
+      certBoxStyle: (s.certForm !== false)
+        ? { width: 16, height: 16, border: '1px solid var(--color-text)', background: 'var(--color-accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, fontSize: 11, fontWeight: 800 }
+        : { width: 16, height: 16, border: '1px solid var(--color-divider)', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, fontSize: 11, fontWeight: 800 },
+      certMark: (s.certForm !== false) ? '✓' : '',
+      certRows: s.items.map((it, i) => ({
+        no: i + 1,
+        date: this.formatThaiDate(it.date),
+        amount: this.roundMoney(it.amount),
+        detail: it.type === 'toll' ? 'ค่าผ่านทางพิเศษ' : ((it.type === 'personal' ? 'ค่าเดินทาง' : 'ค่าโดยสาร') + (it.purpose || '') + ' จาก' + (it.origin || '') + 'ไป' + (it.destination || '')),
+        note: '',
+      })),
+      certFrom: s.items.length ? this.formatThaiDate(s.items[0].date) : '',
+      certTo: s.items.length ? this.formatThaiDate(s.items[s.items.length - 1].date) : '',
+      certPageStyle: { width: 794, height: 1123, padding: 56, boxSizing: 'border-box', background: '#fff', border: '1px solid var(--color-divider)', boxShadow: 'var(--shadow-md)', flexShrink: 0, display: 'flex', flexDirection: 'column', fontFamily: "'Angsana New','AngsanaUPC','TH Sarabun New',serif", color: '#000' },
+      docHeaderExtra: s.a4Mode ? 'flex-direction:row' : 'flex-direction:column',
+      docNumBlockStyle: s.a4Mode ? { textAlign: 'right', flexShrink: 0 } : { marginTop: 10 },
+      toggleA4: () => this.setState({ a4Mode: !this.state.a4Mode, a4Offsets: null, a4Height: 0, certOffsets: null, certHeight: 0 }),
+      a4KnobStyle: { position: 'absolute', top: 2, left: s.a4Mode ? 18 : 2, width: 14, height: 14, background: s.a4Mode ? 'var(--color-accent)' : 'var(--color-neutral-500)', transition: 'left .15s' },
+      a4TrackStyle: { position: 'relative', width: 34, height: 18, border: '1px solid var(--color-divider)', background: s.a4Mode ? 'var(--color-accent-100)' : 'var(--color-neutral-200)', cursor: 'pointer', flexShrink: 0 },
+      docPagesStyle: s.a4Mode
+        ? { width: 794, transform: 'scale(' + a4Scale + ')', transformOrigin: 'top left', display: 'flex', flexDirection: 'column', gap: 16 }
+        : {},
+      docSheetWrapStyle: s.a4Mode ? { height: a4TotalH * a4Scale, width: 794 * a4Scale } : {},
+      a4Pages: a4Pages,
+      previewScrollStyle: { flex: 1, overflow: 'auto', padding: '12px var(--space-4) 24px', cursor: s.a4Mode ? 'grab' : 'default', touchAction: s.a4Mode ? 'pan-x pan-y pinch-zoom' : 'auto' },
+      panDown: (e) => this.panDown(e),
+      panMove: (e) => this.panMove(e),
+      panUp: () => this.panUp(),
+      touchStart: (e) => this.touchStart(e),
+      touchMove: (e) => this.touchMove(e),
+      touchEnd: (e) => this.touchEnd(e),
+      certBlankRows: [],
+      showDocSignature: !s.a4Mode,
+      certPages: certPages,
+      previewScrollRef: (el) => {
+        if (!el) return;
+        const cs = getComputedStyle(el);
+        const avail = el.clientWidth - parseFloat(cs.paddingLeft || 0) - parseFloat(cs.paddingRight || 0);
+        if (avail > 0 && Math.abs((this.state.a4Avail || 0) - avail) > 1) this.setState({ a4Avail: avail });
+      },
+      a4Zoom: s.a4Zoom || 1,
+      a4ZoomLabel: Math.round((s.a4Zoom || 1) * 100) + '%',
+      zoomIn: () => this.setState({ a4Zoom: Math.min(3, (this.state.a4Zoom || 1) + 0.25) }),
+      zoomOut: () => this.setState({ a4Zoom: Math.max(1, (this.state.a4Zoom || 1) - 0.25) }),
+
+      previewItems: s.items.map(it => ({
+        typeLabel: typeMeta[it.type] || it.type,
+        dateDisplay: this.formatThaiDate(it.date),
+        origin: it.origin, destination: it.destination, distance: it.distance, ratePerKm: it.ratePerKm,
+        purpose: it.purpose, amount: it.amount,
+        isPersonal: it.type === 'personal',
+        hasRoute: it.type === 'personal' || it.type === 'public',
+        attachment: this.attachmentFor(it.fileId, true),
+      })),
+      previewRowStyle: s.a4Mode
+        ? { border: '1px solid var(--color-divider)', padding: 14, display: 'flex', gap: 16, alignItems: 'flex-start' }
+        : { border: '1px solid var(--color-divider)', padding: 10, display: 'flex', gap: 10 },
+      previewAttachStyle: s.a4Mode ? { width: '35%', flexShrink: 0 } : { width: 75, flexShrink: 0 },
+      previewTextStyle: s.a4Mode
+        ? { flex: 1, minWidth: 0, fontSize: 13, display: 'flex', flexDirection: 'column', gap: 4 }
+        : { flex: 1, minWidth: 0, fontSize: 11.5, lineHeight: 1.55, display: 'flex', flexDirection: 'column', gap: 2 },
+      confirmEmployeeSignature: () => this.confirmEmployeeSignature(),
+      askSubmitConfirm: () => { if (s.employeeSignatureDrawn) this.setState({ showSubmitConfirm: true }); },
+      cancelSubmitConfirm: () => this.setState({ showSubmitConfirm: false }),
+      showSubmitConfirm: !!s.showSubmitConfirm,
+      askReasonConfirm: () => {
+        if (!s.selectedReason) return;
+        if (s.selectedReason === 'อื่นๆ' && !String(s.otherReasonText || '').trim()) return;
+        this.setState({ showReasonConfirm: true });
+      },
+      cancelReasonConfirm: () => this.setState({ showReasonConfirm: false }),
+      showReasonConfirm: !!s.showReasonConfirm,
+      backToDashboardReset: () => this.backToDashboardReset(),
+      mgrPendingCount: mgrPendingDocs.length,
+      pendingTotalLabel: (() => {
+        const sum = mgrPendingDocs.reduce((a, d) => a + (parseFloat(String(d.amount).replace(/,/g, '')) || 0), 0);
+        return sum ? 'รวม ฿' + sum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : 'ไม่มียอดค้างอนุมัติ';
+      })(),
+      pendingAgeLabel: mgrPendingDocs.length
+        ? ('รายการเก่าสุดส่งเมื่อ ' + (mgrPendingDocs[mgrPendingDocs.length - 1].date || '-'))
+        : 'คุณตรวจสอบครบทุกรายการแล้ว',
+      pendingTicks: Array.from({ length: Math.max(4, mgrPendingDocs.length) }, (_, i) => ({
+        fill: i < mgrPendingDocs.length ? '#fff' : 'color-mix(in srgb, #fff 28%, transparent)',
+      })),
+      pendingListRef: (el) => { this._pendingListEl = el; },
+      scrollToPending: () => {
+        const el = this._pendingListEl;
+        if (!el) return;
+        const sc = el.closest('[style*="overflow-y"]') || el.parentElement;
+        if (sc) sc.scrollTo({ top: el.offsetTop - 12, behavior: 'smooth' });
+      },
+      yearLabel: String(base.getFullYear() + 543),
+      yearTotal: money(yearDocs.reduce((a, d) => a + (parseFloat(String(d.amount).replace(/,/g, '')) || 0), 0)),
+      approveAllSoon: () => this.showToast('อนุมัติทั้งหมด · ฟีเจอร์นี้กำลังพัฒนา'),
+      prevYear: () => this.shiftMonth(-12),
+      nextYear: () => this.shiftMonth(12),
+      nextYearDisabled: monthOffset + 12 > 0,
+      monthLabel, monthTotal, monthCount, monthAverage, monthTrend, monthRows,
+      hasMonthRows: monthRows.length > 0, noMonthRows: monthRows.length === 0,
+      prevMonth: () => this.shiftMonth(-1),
+      nextMonth: () => this.shiftMonth(1),
+      nextMonthDisabled: monthOffset >= 0,
+      monthBaseOffset: monthOffset,
+      mgrPendingDocs, hasMgrPending: mgrPendingDocs.length > 0, noMgrPending: mgrPendingDocs.length === 0,
+      activeDoc,
+      activeDocAttachments: (activeDocRaw && activeDocRaw.files && activeDocRaw.files.length) ? activeDocRaw.files : [{ name: 'ใบเสร็จค่าโดยสาร.jpg' }, { name: 'แผนที่เส้นทาง.png' }],
+      activeDocHasCorrection: !!(activeDocRaw && activeDocRaw.status === 'correction' && activeDocRaw.correctionReason),
+      activeDocIsPending: !!(activeDocRaw && activeDocRaw.status === 'pending'),
+      onManagerComment: (e) => this.onManagerComment(e),
+      openCorrection: () => this.openCorrection(),
+      openReject: () => this.openReject(),
+      openApprove: () => this.openApprove(),
+      showReasonPanel: s.showReasonPanel,
+      reasonPanelTitle: s.reasonMode === 'correction' ? 'เลือกเหตุผลที่ขอให้แก้ไข' : 'เลือกเหตุผลที่ไม่อนุมัติ',
+      reasonOptions,
+      reasonSubmitDisabled: !s.selectedReason || (s.selectedReason === 'อื่นๆ' && !String(s.otherReasonText || '').trim()),
+      isOtherReason: s.selectedReason === 'อื่นๆ',
+      otherReasonText: s.otherReasonText || '',
+      onOtherReason: (e) => this.setState({ otherReasonText: e.target.value }),
+      cancelReasonPanel: () => this.cancelReasonPanel(),
+      submitReason: () => this.submitReason(),
+      showApproveConfirm: s.showApproveConfirm,
+      cancelApprove: () => this.cancelApprove(),
+      mgrDown: (e) => this.mgrDown(e), mgrMove: (e) => this.mgrMove(e), mgrUp: () => this.mgrUp(),
+      clearMgrSignature: () => this.clearMgrSignature(),
+      approveDisabled: !s.managerSignatureDrawn,
+      confirmApprove: () => this.confirmApprove(),
+      hasToast: !!s.toast,
+      toast: s.toast,
+    };
+  }
+}
+
+</script>
+</body>
+</html>
