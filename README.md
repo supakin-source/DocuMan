@@ -53,6 +53,8 @@ default:
   console. Add `http://localhost:3000/api/auth/callback/google` as an authorised
   redirect URI, and enable the **Google Drive API** on the same project.
 - `GOOGLE_GENAI_API_KEY` — API key from [AI Studio](https://aistudio.google.com/apikey).
+  See `docs/ai-integration.md` for how the Gemini model is chosen and what to
+  do when Google retires one.
 - `ALLOWED_EMAIL_DOMAINS` — comma-separated allow-list for sign-in. Empty means
   any Google account may sign in.
 
@@ -88,6 +90,7 @@ src/lib/google/           Per-user OAuth client and Drive access
 src/lib/ocr/              Text and structured extraction via Gemini
 src/lib/thai.ts           Buddhist Era dates and baht-in-words
 scripts/grant-admin.ts    Bootstraps the first admin
+docs/ai-integration.md    How the Gemini model is chosen, and swapping it
 design/                   The Claude Design export this is implemented against
 ```
 
