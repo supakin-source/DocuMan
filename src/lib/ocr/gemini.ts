@@ -1,7 +1,8 @@
-import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
 
 import { serverEnv } from "@/lib/env";
+
+const GENERATIVE_API = "https://generativelanguage.googleapis.com/v1beta/models";
 
 /**
  * Gemini accepts these inline. Anything else must be converted before OCR.
@@ -23,16 +24,15 @@ const SUPPORTED_MIME_TYPES = new Set([
 const MAX_INLINE_BYTES = 18 * 1024 * 1024;
 
 export type OcrInput = {
-  bytes: Buffer;
+  bytes: Uint8Array;
   mimeType: string;
 };
 
-let client: GoogleGenAI | undefined;
-
-function genai(): GoogleGenAI {
-  client ??= new GoogleGenAI({ apiKey: serverEnv().GOOGLE_GENAI_API_KEY });
-  return client;
-}
+type GenerateContentResponse = {
+  candidates?: { content?: { parts?: { text?: string }[] } }[];
+  promptFeedback?: { blockReason?: string };
+  error?: { message?: string };
+};
 
 function assertSupported({ bytes, mimeType }: OcrInput): void {
   if (!SUPPORTED_MIME_TYPES.has(mimeType)) {
@@ -48,8 +48,67 @@ function assertSupported({ bytes, mimeType }: OcrInput): void {
   }
 }
 
+/**
+ * Base64 without Node's Buffer, which the Workers runtime does not provide.
+ * Chunked because spreading a multi-megabyte array into String.fromCharCode
+ * overflows the call stack.
+ */
+function toBase64(bytes: Uint8Array): string {
+  const CHUNK = 0x8000;
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
+}
+
+/**
+ * Calls generateContent over REST.
+ *
+ * The @google/genai SDK is not used: it depends on google-auth-library, `ws` and
+ * `protobufjs`, which drag Node built-ins into a Workers bundle. For an
+ * API-key-authenticated call this endpoint is a single POST.
+ */
+async function generateContent(body: unknown): Promise<string> {
+  const env = serverEnv();
+
+  const response = await fetch(
+    `${GENERATIVE_API}/${env.GEMINI_MODEL}:generateContent`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": env.GOOGLE_GENAI_API_KEY,
+      },
+      body: JSON.stringify(body),
+    },
+  );
+
+  const raw = await response.text();
+
+  if (!response.ok) {
+    throw new OcrFailedError(`Gemini returned ${response.status}: ${raw.slice(0, 300)}`);
+  }
+
+  const parsed = JSON.parse(raw) as GenerateContentResponse;
+
+  // A safety filter returns 200 with no candidates, which would otherwise read
+  // as an empty document rather than a refusal.
+  if (parsed.promptFeedback?.blockReason) {
+    throw new OcrFailedError(
+      `Gemini blocked the request: ${parsed.promptFeedback.blockReason}`,
+    );
+  }
+
+  return (
+    parsed.candidates?.[0]?.content?.parts
+      ?.map((part) => part.text ?? "")
+      .join("") ?? ""
+  );
+}
+
 function inlinePart({ bytes, mimeType }: OcrInput) {
-  return { inlineData: { mimeType, data: bytes.toString("base64") } };
+  return { inline_data: { mime_type: mimeType, data: toBase64(bytes) } };
 }
 
 /**
@@ -59,8 +118,7 @@ function inlinePart({ bytes, mimeType }: OcrInput) {
 export async function extractText(input: OcrInput): Promise<string> {
   assertSupported(input);
 
-  const response = await genai().models.generateContent({
-    model: serverEnv().GEMINI_MODEL,
+  return generateContent({
     contents: [
       {
         role: "user",
@@ -79,8 +137,6 @@ export async function extractText(input: OcrInput): Promise<string> {
       },
     ],
   });
-
-  return response.text ?? "";
 }
 
 /**
@@ -98,8 +154,7 @@ export async function extractStructured<T extends z.ZodType>(
 ): Promise<z.infer<T>> {
   assertSupported(input);
 
-  const response = await genai().models.generateContent({
-    model: serverEnv().GEMINI_MODEL,
+  const raw = await generateContent({
     contents: [
       {
         role: "user",
@@ -116,13 +171,12 @@ export async function extractStructured<T extends z.ZodType>(
         ],
       },
     ],
-    config: {
-      responseMimeType: "application/json",
-      responseJsonSchema: z.toJSONSchema(schema, { io: "output" }),
+    generationConfig: {
+      response_mime_type: "application/json",
+      response_json_schema: z.toJSONSchema(schema, { io: "output" }),
     },
   });
 
-  const raw = response.text;
   if (!raw) {
     throw new OcrFailedError("Gemini returned an empty response");
   }

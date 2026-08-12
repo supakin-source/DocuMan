@@ -1,6 +1,5 @@
 import "dotenv/config";
 
-import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
 
 import { prisma } from "@/lib/db";
@@ -56,7 +55,6 @@ async function checkEnvironment(): Promise<boolean> {
  */
 async function checkGemini() {
   const env = serverEnv();
-  const ai = new GoogleGenAI({ apiKey: env.GOOGLE_GENAI_API_KEY });
 
   const schema = z.object({
     total: z.number().describe("The total amount in baht"),
@@ -64,27 +62,48 @@ async function checkGemini() {
   });
 
   try {
-    const response = await ai.models.generateContent({
-      model: env.GEMINI_MODEL,
-      contents: [
-        {
-          role: "user",
-          parts: [
+    // Posted directly rather than through src/lib/ocr, so a pass proves the key
+    // and the endpoint work even if that module is mid-change.
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL}:generateContent`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": env.GOOGLE_GENAI_API_KEY,
+        },
+        body: JSON.stringify({
+          contents: [
             {
-              text:
-                "ใบเสร็จค่าแท็กซี่ ลงวันที่ 28 กรกฎาคม 2569 จำนวนเงิน 245 บาท " +
-                "Extract the total and the date. The year is in the Buddhist Era.",
+              role: "user",
+              parts: [
+                {
+                  text:
+                    "ใบเสร็จค่าแท็กซี่ ลงวันที่ 28 กรกฎาคม 2569 จำนวนเงิน 245 บาท " +
+                    "Extract the total and the date. The year is in the Buddhist Era.",
+                },
+              ],
             },
           ],
-        },
-      ],
-      config: {
-        responseMimeType: "application/json",
-        responseJsonSchema: z.toJSONSchema(schema, { io: "output" }),
+          generationConfig: {
+            response_mime_type: "application/json",
+            response_json_schema: z.toJSONSchema(schema, { io: "output" }),
+          },
+        }),
       },
-    });
+    );
 
-    const raw = response.text;
+    const payload = await response.text();
+    if (!response.ok) {
+      record("gemini: structured output", false, `HTTP ${response.status}: ${payload.slice(0, 200)}`);
+      return;
+    }
+
+    const body = JSON.parse(payload) as {
+      candidates?: { content?: { parts?: { text?: string }[] } }[];
+    };
+    const raw = body.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("");
+
     if (!raw) {
       record("gemini: structured output", false, "empty response");
       return;
@@ -129,7 +148,9 @@ async function checkDrive(userId: string, email: string) {
     return;
   }
 
-  const payload = Buffer.from(`DocuMan verification ${new Date().toISOString()}`);
+  const payload = new TextEncoder().encode(
+    `DocuMan verification ${new Date().toISOString()}`,
+  );
   let fileId: string | null = null;
 
   try {
@@ -147,7 +168,9 @@ async function checkDrive(userId: string, email: string) {
 
   try {
     const back = await downloadFile(userId, fileId);
-    const identical = back.equals(payload);
+    const identical =
+      back.byteLength === payload.byteLength &&
+      back.every((byte, index) => byte === payload[index]);
     record(
       "drive: download",
       identical,
