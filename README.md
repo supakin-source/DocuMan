@@ -11,10 +11,10 @@ Drive storage and Gemini-based OCR.
 | ---------- | ------------------------------------------------- |
 | Framework  | Next.js 16 (App Router), React 19, TypeScript     |
 | Styling    | Tailwind CSS 4                                    |
-| Database   | PostgreSQL via Prisma 7 (`@prisma/adapter-pg`)    |
+| Database   | PostgreSQL via Prisma 7 (Neon in production, `pg` locally/CI) |
 | Auth       | Auth.js v5 (`next-auth@beta`) — Google provider   |
 | Storage    | Google Drive (`drive.file` scope)                 |
-| OCR        | Google AI Studio — Gemini 2.5 Flash               |
+| OCR        | Google AI Studio — Gemini                         |
 
 ## Getting started
 
@@ -112,32 +112,26 @@ design/                   The Claude Design export this is implemented against
 | `/admin`                 | User administration (ADMIN only)               |
 | `/admin/[id]`            | HR fields, approver and roles for one account  |
 
-## Deploying to Cloudflare
+## Deploying to Netlify
 
-```bash
-pnpm cf:build      # OpenNext adapts the Next build into a Worker
-pnpm cf:preview    # run that Worker locally
-pnpm cf:deploy     # ship it
-```
+Connect the repository directly in the Netlify dashboard (Add new site →
+Import an existing project → GitHub → this repo) — `netlify.toml` declares the
+build command and the official `@netlify/plugin-nextjs` plugin, so Netlify
+builds and redeploys on every push to `main` with no local CLI involved.
 
-Secrets are set with `wrangler secret put NAME`, never in `wrangler.jsonc`:
+Set these in Site configuration → Environment variables:
 `DATABASE_URL`, `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`,
 `GOOGLE_GENAI_API_KEY`, `ALLOWED_EMAIL_DOMAINS`, and `AUTH_TRUST_HOST=true`.
 Skipping `ALLOWED_EMAIL_DOMAINS` opens sign-in to any Google account, not just
 the company domain — `src/lib/env.ts` treats an empty value as "allow all".
 
-The "Deploy to Cloudflare" GitHub Actions workflow (`workflow_dispatch`) does
-both the secret push and the deploy from repo secrets, for triggering from the
-Actions tab with no local `wrangler` login.
-
-`DATABASE_URL` must point at Neon. Workers has no TCP sockets, so Postgres is
-reached through Neon's WebSocket driver; `pg` is used only on Node, for local
-development and CI, and is kept out of the Worker bundle by
-`serverExternalPackages`.
-
-Neon rather than a conventional managed Postgres because this app is used a
-handful of times a month: Neon suspends when idle and resumes on the next
-connection, with nothing to wake by hand.
+`DATABASE_URL` should still point at Neon rather than a conventional managed
+Postgres: this app is used a handful of times a month, and Neon suspends when
+idle and resumes on the next connection, with nothing to wake by hand. Netlify
+Functions run on Node, so `pg` (used locally and in CI) would work too, but
+there is no reason to run two databases — `src/lib/db.ts` picks the Neon
+adapter whenever `DATABASE_URL` is a `.neon.tech` host and falls back to `pg`
+otherwise.
 
 ## Notes
 
