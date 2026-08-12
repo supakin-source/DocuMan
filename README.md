@@ -122,7 +122,13 @@ pnpm cf:deploy     # ship it
 
 Secrets are set with `wrangler secret put NAME`, never in `wrangler.jsonc`:
 `DATABASE_URL`, `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`,
-`GOOGLE_GENAI_API_KEY`, and `AUTH_TRUST_HOST=true`.
+`GOOGLE_GENAI_API_KEY`, `ALLOWED_EMAIL_DOMAINS`, and `AUTH_TRUST_HOST=true`.
+Skipping `ALLOWED_EMAIL_DOMAINS` opens sign-in to any Google account, not just
+the company domain — `src/lib/env.ts` treats an empty value as "allow all".
+
+The "Deploy to Cloudflare" GitHub Actions workflow (`workflow_dispatch`) does
+both the secret push and the deploy from repo secrets, for triggering from the
+Actions tab with no local `wrangler` login.
 
 `DATABASE_URL` must point at Neon. Workers has no TCP sockets, so Postgres is
 reached through Neon's WebSocket driver; `pg` is used only on Node, for local
