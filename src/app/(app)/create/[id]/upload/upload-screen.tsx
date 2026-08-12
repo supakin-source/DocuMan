@@ -33,6 +33,7 @@ type UploadedFile = {
 export function UploadScreen({ documentId }: { documentId: string }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+  const controllersRef = useRef(new Map<string, AbortController>());
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,11 +78,14 @@ export function UploadScreen({ documentId }: { documentId: string }) {
           { key, name: file.name, status: "uploading", previewUrl },
         ]);
 
+        const controller = new AbortController();
+        controllersRef.current.set(key, controller);
+
         try {
           const result = await apiUpload<{
             attachment: { driveFileId: string; fileName: string };
             extraction: Extraction | null;
-          }>(`/api/documents/${documentId}/attachments`, file);
+          }>(`/api/documents/${documentId}/attachments`, file, controller.signal);
 
           setFiles((current) =>
             current.map((entry) =>
@@ -96,6 +100,10 @@ export function UploadScreen({ documentId }: { documentId: string }) {
             ),
           );
         } catch (cause) {
+          // Cancelled from remove() below — that already dropped the row, so
+          // there is nothing left to update and no failure to report.
+          if (cause instanceof DOMException && cause.name === "AbortError") return;
+
           setFiles((current) =>
             current.map((entry) =>
               entry.key === key ? { ...entry, status: "failed" } : entry,
@@ -106,12 +114,15 @@ export function UploadScreen({ documentId }: { documentId: string }) {
               ? cause.message
               : "อัปโหลดล้มเหลว กรุณาลองใหม่อีกครั้ง",
           );
+        } finally {
+          controllersRef.current.delete(key);
         }
       }),
     );
   }
 
   function remove(key: string) {
+    controllersRef.current.get(key)?.abort();
     setFiles((current) => {
       const target = current.find((entry) => entry.key === key);
       if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl);
@@ -232,20 +243,30 @@ export function UploadScreen({ documentId }: { documentId: string }) {
                   key={file.key}
                   className="flex items-center gap-2.5 border border-divider p-2"
                 >
-                  {file.previewUrl ? (
-                    // Object URL of a file the user just picked; next/image adds
-                    // nothing over a 40px local thumbnail.
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={file.previewUrl}
-                      alt=""
-                      className="h-10 w-10 shrink-0 object-cover"
-                    />
-                  ) : (
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center bg-neutral-200">
-                      <FileIcon size={18} />
-                    </span>
-                  )}
+                  <span className="relative h-10 w-10 shrink-0">
+                    {file.previewUrl ? (
+                      // Object URL of a file the user just picked; next/image adds
+                      // nothing over a 40px local thumbnail.
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={file.previewUrl}
+                        alt=""
+                        className="h-10 w-10 object-cover"
+                      />
+                    ) : (
+                      <span className="flex h-10 w-10 items-center justify-center bg-neutral-200">
+                        <FileIcon size={18} />
+                      </span>
+                    )}
+
+                    {file.status === "uploading" ? (
+                      // Sits on the thumbnail itself — the row it belongs to is
+                      // what needs to read as "still going", not just a caption.
+                      <span className="absolute inset-0 flex items-center justify-center bg-black/45">
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                      </span>
+                    ) : null}
+                  </span>
 
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-xs font-semibold">{file.name}</div>
@@ -284,7 +305,7 @@ export function UploadScreen({ documentId }: { documentId: string }) {
           disabled={!ready || busy}
           className="btn btn-primary btn-block border border-transparent"
         >
-          {busy ? "ระบบกำลังอ่านข้อมูล..." : "ยืนยัน"}
+          ยืนยัน
         </button>
       </div>
     </div>

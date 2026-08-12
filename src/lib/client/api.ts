@@ -44,8 +44,12 @@ export async function apiSend<T>(
   );
 }
 
-export async function apiUpload<T>(url: string, file: File): Promise<T> {
+export async function apiUpload<T>(
+  url: string,
+  file: File,
+  signal?: AbortSignal,
+): Promise<T> {
   const form = new FormData();
   form.append("file", file);
-  return unwrap<T>(await fetch(url, { method: "POST", body: form }));
+  return unwrap<T>(await fetch(url, { method: "POST", body: form, signal }));
 }
