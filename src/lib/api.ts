@@ -8,7 +8,7 @@ import {
   NotFoundError,
   ValidationError,
 } from "@/lib/domain/errors";
-import { GoogleReauthRequiredError } from "@/lib/google/oauth";
+import { GoogleReauthRequiredError } from "@/lib/google/token";
 import { OcrFailedError, UnsupportedDocumentError } from "@/lib/ocr/gemini";
 
 export type ApiError = {

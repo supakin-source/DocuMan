@@ -10,7 +10,12 @@ const serverEnvSchema = z.object({
   AUTH_GOOGLE_ID: z.string().min(1, "AUTH_GOOGLE_ID is required"),
   AUTH_GOOGLE_SECRET: z.string().min(1, "AUTH_GOOGLE_SECRET is required"),
   GOOGLE_GENAI_API_KEY: z.string().min(1, "GOOGLE_GENAI_API_KEY is required"),
-  GEMINI_MODEL: z.string().default("gemini-2.5-flash"),
+  // "gemini-2.5-flash" is still listed by ListModels but rejects generateContent
+  // for API keys created after Google's cutoff ("no longer available to new
+  // users") — confirmed against the live API on 2026-08-12. The "-latest" alias
+  // tracks whatever Google currently points it at, so this does not go stale the
+  // same way a pinned version number will.
+  GEMINI_MODEL: z.string().default("gemini-flash-latest"),
   GOOGLE_DRIVE_ROOT_FOLDER_NAME: z.string().default("DocuMan"),
 });
 

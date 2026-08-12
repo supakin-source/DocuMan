@@ -1,0 +1,49 @@
+name: Deploy to Cloudflare
+
+# Manual only — this ships to production and writes real secrets onto the
+# Worker, so it never runs on a push or a PR by accident.
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm cf:build
+
+      # Secrets live on the Worker itself (`wrangler secret put`), not in
+      # wrangler.jsonc — each run overwrites them with whatever the repo
+      # secrets currently hold, so rotating a repo secret and re-running this
+      # workflow is how a deployed secret gets rotated too.
+      - name: Set Worker secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -e
+          echo "${{ secrets.NEON_DATABASE_URL }}" | pnpm exec wrangler secret put DATABASE_URL
+          echo "${{ secrets.AUTH_SECRET }}" | pnpm exec wrangler secret put AUTH_SECRET
+          echo "${{ secrets.AUTH_GOOGLE_ID }}" | pnpm exec wrangler secret put AUTH_GOOGLE_ID
+          echo "${{ secrets.AUTH_GOOGLE_SECRET }}" | pnpm exec wrangler secret put AUTH_GOOGLE_SECRET
+          echo "${{ secrets.GOOGLE_GENAI_API_KEY }}" | pnpm exec wrangler secret put GOOGLE_GENAI_API_KEY
+          echo "${{ secrets.ALLOWED_EMAIL_DOMAINS }}" | pnpm exec wrangler secret put ALLOWED_EMAIL_DOMAINS
+          echo "true" | pnpm exec wrangler secret put AUTH_TRUST_HOST
+
+      - name: Deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm cf:deploy

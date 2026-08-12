@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "documan",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-08-11",
+
+  // `nodejs_compat` gives the Worker the Node built-ins that Next's server
+  // runtime and Prisma still reach for. The Google and OCR layers were rewritten
+  // onto fetch so they need none of it, but Next itself does.
+  "compatibility_flags": ["nodejs_compat"],
+
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+
+  "observability": {
+    "enabled": true
+  }
+
+  // Secrets are not listed here — they are set with `wrangler secret put` so
+  // they never land in the repository. See README for the full list.
+}
