@@ -6,6 +6,49 @@ transcribes it (`extractText`) or returns structured fields — amount, date,
 origin/destination — validated against a Zod schema (`extractStructured`).
 Both live in `src/lib/ocr/gemini.ts`.
 
+## What gets extracted from a receipt
+
+`gemini.ts` is generic transport — any Zod schema, any instructions. The one
+schema this app actually asks for today lives in `src/lib/ocr/travel.ts`,
+for travel expenses (the only category DocuMan currently has).
+`src/app/api/documents/[id]/attachments/route.ts` calls its
+`extractTravelItem` right after a file lands in Drive, and never lets a
+failed read fail the upload — the attachment is created either way, so a
+bad read costs a manual correction later, not a lost file.
+
+The schema Gemini is constrained to (`extractionSchema` in `travel.ts`):
+
+| Field         | Type                                                          | Notes |
+| ------------- | -------------------------------------------------------------- | ----- |
+| `kind`        | `personal_vehicle` \| `public_transport` \| `toll` \| `unknown` | Map screenshot vs. bus/train/taxi receipt vs. expressway/parking slip |
+| `date`        | Gregorian `YYYY-MM-DD`, nullable                                | The instructions tell the model to convert from พ.ศ. itself |
+| `origin` / `destination` | free text, nullable                                  | |
+| `distanceKm`  | number, nullable                                                | Only meaningful for `personal_vehicle` |
+| `amount`      | number (THB), nullable                                         | Null for a map screenshot, which shows no price |
+
+Every field but `kind` is nullable on purpose: the instructions tell the
+model to leave anything the document doesn't state as null rather than
+guess, because a wrong guess is worse than a blank the reviewer notices.
+
+Two things the calling code does with the result that are easy to miss:
+
+- `kind: "unknown"` still becomes a line (as `PUBLIC_TRANSPORT`, flagged
+  `uncertain: true`) instead of being dropped — the user already waited for
+  the upload, so an unrecognized document still needs a line to fill in.
+- A `personal_vehicle` line's `amount` from the model is always discarded
+  and recomputed server-side as `distanceKm × ratePerKm`
+  (`DEFAULT_RATE_PER_KM`, company policy, not something printed on a map
+  screenshot) — no figure the model reads off a document is ever trusted
+  for money on that line.
+
+### Adding another document category
+
+There's one schema today because there's one expense category (`TRAVEL`).
+A category that needs its own extraction should follow `travel.ts`'s
+shape: its own Zod schema and instructions string, calling the shared
+`extractStructured` from `gemini.ts` — not a new code path inside
+`gemini.ts` itself, which is meant to stay category-agnostic.
+
 ## Where the model is chosen
 
 The model name is **never hardcoded**. It comes from the `GEMINI_MODEL`
