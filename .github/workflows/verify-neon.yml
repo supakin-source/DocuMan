@@ -1,0 +1,38 @@
+name: Verify Neon connection
+
+# Manual only — this hits a real database with real credentials, so it never
+# runs on a push or a PR by accident.
+#
+# Exists for testing from the GitHub web UI with no terminal: Actions runners
+# have ordinary internet access, unlike the agent sandbox this was developed
+# in, which has an organisation egress policy that blocks Neon's domains
+# outright. A run here is the real test; a failure in that sandbox was not.
+on:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    name: Migrate and connect
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Apply migrations
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+        run: pnpm db:deploy
+
+      - name: Confirm a real query round-trips
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+        run: pnpm verify:db
