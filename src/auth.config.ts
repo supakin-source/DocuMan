@@ -40,7 +40,10 @@ export const authConfig = {
           // the one-hour access token expires. Google only returns one when both
           // of these are set.
           access_type: "offline",
-          prompt: "consent",
+          // "select_account" stops Google silently reusing whichever Google
+          // account the browser already has a session with — someone signed
+          // into a personal account needs to be able to pick their work one.
+          prompt: "select_account consent",
         },
       },
     }),
