@@ -13,9 +13,11 @@ import { PrismaClient } from "@/generated/prisma/client";
  *
  * Set DB_DRIVER to force one; otherwise it is chosen from the connection string.
  *
- * Note: both are imported statically, so both end up in a bundle. That is fine
- * on Node and is currently what blocks the Cloudflare Worker build — see the
- * deployment notes in README.
+ * Both are imported statically, but `pg` is listed in next.config's
+ * serverExternalPackages, so it stays out of the Cloudflare bundle — it requires
+ * `pg-cloudflare`, which esbuild cannot resolve for that target. The reference
+ * survives as an unresolved external and is never executed, because a Workers
+ * deployment points DATABASE_URL at Neon.
  */
 function driverFor(url: string | undefined): "neon" | "pg" {
   const forced = process.env.DB_DRIVER;

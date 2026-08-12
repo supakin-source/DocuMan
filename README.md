@@ -112,6 +112,27 @@ design/                   The Claude Design export this is implemented against
 | `/admin`                 | User administration (ADMIN only)               |
 | `/admin/[id]`            | HR fields, approver and roles for one account  |
 
+## Deploying to Cloudflare
+
+```bash
+pnpm cf:build      # OpenNext adapts the Next build into a Worker
+pnpm cf:preview    # run that Worker locally
+pnpm cf:deploy     # ship it
+```
+
+Secrets are set with `wrangler secret put NAME`, never in `wrangler.jsonc`:
+`DATABASE_URL`, `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`,
+`GOOGLE_GENAI_API_KEY`, and `AUTH_TRUST_HOST=true`.
+
+`DATABASE_URL` must point at Neon. Workers has no TCP sockets, so Postgres is
+reached through Neon's WebSocket driver; `pg` is used only on Node, for local
+development and CI, and is kept out of the Worker bundle by
+`serverExternalPackages`.
+
+Neon rather than a conventional managed Postgres because this app is used a
+handful of times a month: Neon suspends when idle and resumes on the next
+connection, with nothing to wake by hand.
+
 ## Notes
 
 - **Drive scope.** DocuMan requests `drive.file`, which grants access only to
