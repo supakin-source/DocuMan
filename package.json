@@ -16,6 +16,7 @@
     "db:studio": "prisma studio",
     "admin:grant": "tsx scripts/grant-admin.ts",
     "verify:google": "tsx scripts/verify-google.ts",
+    "verify:db": "tsx scripts/verify-db.ts",
     "cf:build": "opennextjs-cloudflare build",
     "cf:preview": "opennextjs-cloudflare preview",
     "cf:deploy": "opennextjs-cloudflare deploy"
