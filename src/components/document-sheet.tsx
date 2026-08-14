@@ -191,6 +191,7 @@ export function DetailSheet({ document }: { document: DocumentDetail }) {
           role="ผู้จัดทำ"
           mark={requesterMark}
           name={document.owner.name ?? ""}
+          previewSlotId="requester-signature-detail"
           when={
             document.submittedAt
               ? `ลงนามแล้ว · ${formatThaiDate(document.submittedAt)}`
@@ -235,32 +236,41 @@ function SignatureBlock({
   name,
   when,
   pendingText,
+  previewSlotId,
 }: {
   role: string;
   mark: string | null;
   name: string;
   when: string | null;
   pendingText: string;
+  /**
+   * Stable DOM id for the preview screen to paint the just-drawn signature
+   * into before it exists in the database — see the client-side injection in
+   * PreviewScreen. Unused once the document actually carries a signature.
+   */
+  previewSlotId?: string;
 }) {
   return (
     <div className="border-t border-divider pt-1.5">
       <div className="text-[10px] opacity-50">{role}</div>
-      {mark ? (
-        <>
-          <Image
-            src={mark}
-            alt=""
-            width={200}
-            height={44}
-            unoptimized
-            className="max-h-11 w-full object-contain"
-          />
-          <div className="mt-0.5 text-[10px]">{name}</div>
-          {when ? <div className="text-[9px] opacity-50">{when}</div> : null}
-        </>
-      ) : (
-        <div className="mt-1 text-[11px] italic opacity-50">{pendingText}</div>
-      )}
+      <div id={previewSlotId}>
+        {mark ? (
+          <>
+            <Image
+              src={mark}
+              alt=""
+              width={200}
+              height={44}
+              unoptimized
+              className="max-h-11 w-full object-contain"
+            />
+            <div className="mt-0.5 text-[10px]">{name}</div>
+            {when ? <div className="text-[9px] opacity-50">{when}</div> : null}
+          </>
+        ) : (
+          <div className="mt-1 text-[11px] italic opacity-50">{pendingText}</div>
+        )}
+      </div>
     </div>
   );
 }
@@ -389,7 +399,12 @@ export function CertificateSheet({ document }: { document: DocumentDetail }) {
       </div>
 
       <div className="mt-10 pb-0.5 text-[13px]">
-        <CertificateSignature label="(ผู้เบิกจ่าย)" mark={requesterMark} name={document.owner.name ?? ""} />
+        <CertificateSignature
+          label="(ผู้เบิกจ่าย)"
+          mark={requesterMark}
+          name={document.owner.name ?? ""}
+          previewSlotId="requester-signature-certificate"
+        />
         <div className="mt-4">
           <CertificateSignature label="(ผู้อนุมัติ)" mark={approverMark} name={approverName} />
         </div>
@@ -402,16 +417,22 @@ function CertificateSignature({
   label,
   mark,
   name,
+  previewSlotId,
 }: {
   label: string;
   mark: string | null;
   name: string;
+  /** See `SignatureBlock`'s `previewSlotId` — same purpose, same mechanism. */
+  previewSlotId?: string;
 }) {
   return (
     <>
       <div className="flex items-end justify-end gap-2">
         <span>ลงชื่อ</span>
-        <span className="flex h-[46px] w-[203px] items-end justify-center border-b border-dashed border-black">
+        <span
+          id={previewSlotId}
+          className="flex h-[46px] w-[203px] items-end justify-center border-b border-dashed border-black"
+        >
           {mark ? (
             <Image
               src={mark}
