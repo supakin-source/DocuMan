@@ -1,18 +1,25 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { ScreenHeader } from "@/components/screen-header";
 import { SheetViewer } from "@/components/sheet-viewer";
 import { ApiRequestError, apiSend } from "@/lib/client/api";
+
+/** Matches document-sheet.tsx's `previewSlotId`s for the requester's mark. */
+const SIGNATURE_SLOT_IDS = ["requester-signature-detail", "requester-signature-certificate"];
 
 /**
  * Final look before submitting.
  *
  * The sheets are rendered on the server and handed in as `detail` and
  * `certificate`, so the same markup drives the on-screen preview, the printed
- * page and the approver's view of the document.
+ * page and the approver's view of the document. The document itself is still
+ * a DRAFT at this point — nothing has been persisted — so the server-rendered
+ * markup shows no signature; the effect below paints the one just drawn
+ * (session-held, never sent until submit) directly into its two slots so it
+ * reads as part of the document rather than being confirmed blind.
  */
 export function PreviewScreen({
   documentId,
@@ -29,9 +36,25 @@ export function PreviewScreen({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    // Toggling the certificate checkbox unmounts and remounts its sheet from
+    // the original server-rendered markup, which would otherwise revert its
+    // slot to blank — withCertificate is a dependency so re-checking it repaints.
+    const signature = sessionStorage.getItem(`documan:signature:${documentId}`);
+    if (!signature) return;
+
+    for (const id of SIGNATURE_SLOT_IDS) {
+      const slot = document.getElementById(id);
+      if (!slot) continue;
+      const img = document.createElement("img");
+      img.src = signature;
+      img.alt = "";
+      img.className = "max-h-11 w-full object-contain";
+      slot.replaceChildren(img);
+    }
+  }, [documentId, withCertificate]);
+
   async function submit() {
-    // Read at submit time rather than mirrored into state: nothing on this
-    // screen renders the mark, so holding it would only risk going stale.
     const signature = sessionStorage.getItem(`documan:signature:${documentId}`);
     if (!signature) {
       setConfirming(false);

@@ -22,8 +22,20 @@ const extractionSchema = z.object({
     .date()
     .nullable()
     .describe("Date on the document as YYYY-MM-DD, Gregorian. Convert from พ.ศ. if needed."),
-  origin: z.string().nullable().describe("Starting place, in the document's own words"),
-  destination: z.string().nullable().describe("Ending place, in the document's own words"),
+  origin: z
+    .string()
+    .nullable()
+    .describe(
+      "Starting place's name only — a landmark, building or area name as printed. " +
+        "Never a full street address, and never GPS coordinates.",
+    ),
+  destination: z
+    .string()
+    .nullable()
+    .describe(
+      "Ending place's name only — a landmark, building or area name as printed. " +
+        "Never a full street address, and never GPS coordinates.",
+    ),
   distanceKm: z
     .number()
     .nullable()
@@ -51,6 +63,9 @@ const INSTRUCTIONS = [
   "Identify which of those it is and pull out the fields described by the schema.",
   "Thai dates are often in the Buddhist Era (พ.ศ.); subtract 543 to get the Gregorian year.",
   "Report distance in kilometres and money in baht as plain numbers, without units or separators.",
+  "A map screenshot often prints the full street address or GPS coordinates under a pin — " +
+    "origin and destination must be the short place name above that, never the address line " +
+    "or the coordinates themselves.",
 ].join(" ");
 
 /**
