@@ -27,7 +27,6 @@ export type EditableItem = {
   distanceKm: string;
   ratePerKm: string;
   amount: string;
-  driveFileId: string | null;
   attachmentId: string | null;
   attachmentIsImage: boolean;
 };
@@ -94,7 +93,6 @@ export function ReviewScreen({
         distanceKm: "",
         ratePerKm: isDerivedAmount(type) ? String(DEFAULT_RATE_PER_KM) : "",
         amount: "",
-        driveFileId: null,
         attachmentId: null,
         attachmentIsImage: false,
       },
@@ -118,7 +116,7 @@ export function ReviewScreen({
           distanceKm: isDerivedAmount(item.type) ? toNumber(item.distanceKm) : null,
           ratePerKm: isDerivedAmount(item.type) ? toNumber(item.ratePerKm) : null,
           amount: isDerivedAmount(item.type) ? null : toNumber(item.amount),
-          driveFileId: item.driveFileId,
+          attachmentId: item.attachmentId,
         })),
       });
       router.push(`/create/${documentId}/sign`);

@@ -248,13 +248,13 @@ export async function saveDocument(
         select: { id: true },
       });
 
-      const driveFileId = input.items[index].driveFileId;
-      if (!driveFileId) continue;
+      const attachmentId = input.items[index].attachmentId;
+      if (!attachmentId) continue;
 
       // Scoped to this document so a client cannot attach someone else's file
-      // by quoting its Drive id.
+      // by quoting its id.
       await tx.attachment.updateMany({
-        where: { documentId, driveFileId },
+        where: { documentId, id: attachmentId },
         data: { itemId: created.id },
       });
     }
