@@ -115,23 +115,29 @@ design/                   The Claude Design export this is implemented against
 | `/admin`                 | User administration (ADMIN only)               |
 | `/admin/[id]`            | HR fields, approver and roles for one account  |
 
-## Deploying to Netlify
+## Deploying to Vercel
 
-Connect the repository directly in the Netlify dashboard (Add new site →
-Import an existing project → GitHub → this repo) — `netlify.toml` declares the
-build command and the official `@netlify/plugin-nextjs` plugin, so Netlify
-builds and redeploys on every push to `main` with no local CLI involved.
+Import the repository in the Vercel dashboard (Add New → Project → this repo).
+Next.js needs no configuration file there: Vercel detects the framework, runs
+`pnpm build`, and redeploys on every push to `main`.
 
-Set these in Site configuration → Environment variables:
+Set these under Settings → Environment Variables:
 `DATABASE_URL`, `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`,
 `GOOGLE_GENAI_API_KEY`, `ALLOWED_EMAIL_DOMAINS`, and `AUTH_TRUST_HOST=true`.
 Skipping `ALLOWED_EMAIL_DOMAINS` opens sign-in to any Google account, not just
 the company domain — `src/lib/env.ts` treats an empty value as "allow all".
 
-`DATABASE_URL` should still point at Neon rather than a conventional managed
+Two things about the plan, because both bite silently rather than loudly:
+Vercel's Hobby tier is licensed for non-commercial personal projects, which an
+internal company tool is not; and it caps a serverless function at 10 seconds,
+which is not enough headroom for rendering a PDF through headless Chromium
+(cold start alone runs 3-8 seconds). Both are Pro-tier concerns rather than
+code ones, but the second one decides how PDFs get generated.
+
+`DATABASE_URL` should point at Neon rather than a conventional managed
 Postgres: this app is used a handful of times a month, and Neon suspends when
-idle and resumes on the next connection, with nothing to wake by hand. Netlify
-Functions run on Node, so `pg` (used locally and in CI) would work too, but
+idle and resumes on the next connection, with nothing to wake by hand. Vercel
+functions run on Node, so `pg` (used locally and in CI) would work too, but
 there is no reason to run two databases — `src/lib/db.ts` picks the Neon
 adapter whenever `DATABASE_URL` is a `.neon.tech` host and falls back to `pg`
 otherwise.
