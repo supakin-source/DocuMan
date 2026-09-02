@@ -74,6 +74,7 @@ Google Cloud project; sign-in and Drive access share a single consent screen.
 | `pnpm db:deploy`   | Apply migrations (deployment)              |
 | `pnpm db:studio`   | Prisma Studio                              |
 | `pnpm admin:grant` | Grant ADMIN to an existing account          |
+| `pnpm line:link`   | Link an account to a LINE user id           |
 
 ## Layout
 
@@ -114,6 +115,33 @@ design/                   The Claude Design export this is implemented against
 | `/profile`               | Your details, roles and stored signature       |
 | `/admin`                 | User administration (ADMIN only)               |
 | `/admin/[id]`            | HR fields, approver and roles for one account  |
+
+## The LINE OA
+
+The workflow is moving into a LINE Official Account: receipts are sent to the
+bot, and the claim is built, corrected and decided there rather than in the web
+screens. This part is under construction — the webhook currently authenticates
+callers and answers, and the claim flow lands on top of it.
+
+Set up in the [LINE Developers console](https://developers.line.biz/console/):
+a Messaging API channel, with **Auto-reply** and **Greeting messages** turned
+off (they answer over the bot's own replies), and the webhook pointed at
+`https://<app>/api/line/webhook`. `LINE_CHANNEL_SECRET` and
+`LINE_CHANNEL_ACCESS_TOKEN` come from that channel.
+
+**Identity has no sign-in.** The only evidence of who is talking is the opaque
+`userId` LINE puts on each event, which is enough to recognise someone already
+linked but says nothing about a stranger. Linking is therefore an admin step:
+someone the bot does not know is shown their own LINE id and asked to pass it
+on, and an admin runs
+
+```bash
+pnpm line:link someone@assetfive.co.th U1234567890abcdef...
+```
+
+Letting the bot link an account from a chat message instead — "I'm
+somebody@assetfive.co.th" — would let anyone file expenses as anyone else,
+since a chat message is a claim rather than proof.
 
 ## Deploying to Vercel
 

@@ -41,6 +41,57 @@ export function serverEnv(): ServerEnv {
 }
 
 /**
+ * The LINE channel's own configuration, parsed separately from `serverEnv`.
+ *
+ * Kept apart on purpose: the webhook has no business demanding a Google OAuth
+ * client be configured before it will answer, and the Google half has no
+ * business demanding a LINE channel. Each half fails on what it actually needs.
+ */
+const lineEnvSchema = z.object({
+  /** Signs every webhook delivery; without it nothing can be trusted. */
+  LINE_CHANNEL_SECRET: z.string().min(1, "LINE_CHANNEL_SECRET is required"),
+  /** Bearer token for replying and pushing. */
+  LINE_CHANNEL_ACCESS_TOKEN: z
+    .string()
+    .min(1, "LINE_CHANNEL_ACCESS_TOKEN is required"),
+});
+
+export type LineEnv = z.infer<typeof lineEnvSchema>;
+
+let cachedLine: LineEnv | undefined;
+
+export function lineEnv(): LineEnv {
+  if (cachedLine) return cachedLine;
+
+  const parsed = lineEnvSchema.safeParse(process.env);
+  if (!parsed.success) {
+    const missing = parsed.error.issues.map((issue) => issue.message).join("\n  - ");
+    throw new Error(`Invalid LINE environment:\n  - ${missing}`);
+  }
+
+  cachedLine = parsed.data;
+  return cachedLine;
+}
+
+/**
+ * Absolute origin for links handed to LINE — LIFF pages and document links have
+ * to be reachable from a phone, so a relative path is no use.
+ *
+ * `APP_URL` wins because Vercel's own `VERCEL_URL` is the per-deployment host,
+ * which changes on every push and would leave already-sent messages pointing at
+ * a stale deployment.
+ */
+export function appUrl(): string {
+  const explicit = process.env.APP_URL?.trim();
+  if (explicit) return explicit.replace(/\/$/, "");
+
+  const vercel = process.env.VERCEL_URL?.trim();
+  if (vercel) return `https://${vercel}`;
+
+  return "http://localhost:3000";
+}
+
+/**
  * E-mail domains permitted to sign in. An empty list means "any Google account".
  */
 export function allowedEmailDomains(): string[] {
