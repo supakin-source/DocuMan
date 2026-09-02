@@ -4,16 +4,16 @@ import localFont from "next/font/local";
 import "./globals.css";
 
 // next/font/google fetches font files from fonts.gstatic.com at build time,
-// which has proven unreliable off Vercel's own infrastructure — it 404'd under
-// Turbopack on Netlify's build image, then failed outright on GitHub Actions'
-// runners. The fonts are vendored into ./fonts (from the google/fonts source
-// repo, not the CDN's per-subset files) instead, so the build never depends on
-// that fetch succeeding.
+// which has failed outright on GitHub Actions' runners and, earlier, on another
+// host's build image. Every environment that builds this has to reach Google's
+// CDN for the build to succeed, and CI is one of them. The fonts are vendored
+// into ./fonts (from the google/fonts source repo, not the CDN's per-subset
+// files) instead, so no build depends on that fetch.
 
 // Archivo carries the design system's Latin voice but has no Thai glyphs, and
 // this app is written in Thai — Noto Sans Thai covers the rest of the interface.
-// Both are variable fonts; the weight axis is opened up via `declarations`
-// since a local variable font otherwise renders only its default weight.
+// Both are variable fonts, so `weight` states the axis range: a local variable
+// font otherwise renders only its default weight.
 const archivo = localFont({
   src: "./fonts/Archivo-Variable.ttf",
   variable: "--font-archivo",

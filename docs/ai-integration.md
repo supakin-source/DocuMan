@@ -85,12 +85,12 @@ happens:
 3. Update `GEMINI_MODEL` everywhere it's set — it is **not** a single
    source of truth, so update all of these together:
    - Local `.env`
-   - Netlify → Site configuration → Environment variables
+   - Vercel → Settings → Environment Variables
    - GitHub repo secrets, if the "Verify Google integrations" workflow reads
      it (currently it doesn't need to — that workflow only sets the four
      required secrets, and `GEMINI_MODEL` falls back to its default; only
      add it there if a non-default model is needed for that check too)
-4. Redeploy (Netlify) and re-run **Verify Google integrations** from the
+4. Redeploy (Vercel) and re-run **Verify Google integrations** from the
    GitHub Actions tab.
 
 No code change is needed for a model swap. If one seems necessary, that's a
@@ -121,6 +121,6 @@ in `gemini.ts`) instead of through Google's SDK. The SDK pulls in
 `google-auth-library`, `ws`, and `protobufjs` — none needed for a single
 API-key-authenticated POST, and all of them Node-specific enough to have
 caused real problems the one time this app targeted a non-Node runtime
-(Cloudflare Workers, before the move to Netlify). The four REST calls this
+(Cloudflare Workers, before the move to hosted Node). The four REST calls this
 needs are simple enough that hand-rolling them costs less than keeping the
 SDK portable would. The same reasoning applies to `src/lib/google/drive.ts`.
