@@ -66,8 +66,8 @@ export const expenseItemInputSchema = z
     ratePerKm: money.max(1_000).nullish(),
     /** Ignored for mileage lines, which are always derived. */
     amount: money.max(10_000_000).nullish(),
-    /** Drive file id of the supporting image or PDF, when one is attached. */
-    driveFileId: z.string().min(1).nullish(),
+    /** Attachment row backing this line, when a file was uploaded for it. */
+    attachmentId: z.string().min(1).nullish(),
   })
   .superRefine((item, ctx) => {
     if (isDerivedAmount(item.type)) {

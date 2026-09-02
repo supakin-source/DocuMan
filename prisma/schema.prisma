@@ -23,6 +23,12 @@ model User {
   emailVerified DateTime?
   image         String?
 
+  /// LINE's opaque per-account user id, from the `source.userId` on every
+  /// webhook event. This is what identifies someone once the flow moves into
+  /// the LINE OA: there is no sign-in there, so the id on the event is the
+  /// whole of the evidence. Null until the account is linked.
+  lineUserId String? @unique
+
   /// A single account can hold several roles — the design lets one person switch
   /// between the requester and approver views without signing out.
   roles AppRole[] @default([REQUESTER])
@@ -126,6 +132,7 @@ model ExpenseDocument {
   items       ExpenseItem[]
   attachments Attachment[]
   timeline    DocumentEvent[]
+  pdf         DocumentPdf?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -209,12 +216,15 @@ enum ExpenseItemType {
 model Attachment {
   id String @id @default(cuid())
 
-  /// Google Drive file id. The bytes never live in Postgres.
-  driveFileId String @unique
-  fileName    String
-  mimeType    String
-  /// Size in bytes as reported by Drive.
-  sizeBytes   Int?
+  fileName  String
+  mimeType  String
+  /// Size of the stored bytes, after downscaling.
+  sizeBytes Int?
+
+  /// The file itself, in its own table so that reading a document's metadata
+  /// does not drag every receipt image across the wire with it. Optional
+  /// because rows predating Postgres storage kept their bytes in Drive.
+  blob AttachmentBlob?
 
   documentId String
   document   ExpenseDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
@@ -230,6 +240,27 @@ model Attachment {
   createdAt DateTime @default(now())
 
   @@index([documentId])
+}
+
+/// Receipt bytes, kept out of Attachment so that listing or rendering a
+/// document costs a few kilobytes of metadata rather than megabytes of images.
+/// Nothing reads this table except the route that serves one file.
+model AttachmentBlob {
+  attachmentId String     @id
+  attachment   Attachment @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
+
+  bytes Bytes
+}
+
+/// The rendered claim, both sheets in one file. Generated once when the
+/// document is submitted rather than on demand, so the link sent to an
+/// approver opens immediately instead of waiting on a renderer cold start.
+model DocumentPdf {
+  documentId String          @id
+  document   ExpenseDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  bytes     Bytes
+  createdAt DateTime @default(now())
 }
 
 // ─── Audit trail ──────────────────────────────────────────────────────────

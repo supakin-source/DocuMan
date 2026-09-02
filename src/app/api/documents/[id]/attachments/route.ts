@@ -8,10 +8,10 @@ import {
   NotFoundError,
   ValidationError,
 } from "@/lib/domain/errors";
-import { uploadFile } from "@/lib/google/drive";
 import { extractTravelItem } from "@/lib/ocr/travel";
+import { storeAttachment } from "@/lib/storage/attachments";
 
-/** Anything larger is refused before it reaches Drive or Gemini. */
+/** Anything larger is refused before it reaches storage or Gemini. */
 const MAX_UPLOAD_BYTES = 18 * 1024 * 1024;
 
 const ACCEPTED = new Set([
@@ -63,30 +63,24 @@ export async function POST(
 
     const bytes = Buffer.from(await file.arrayBuffer());
 
-    const stored = await uploadFile(user.id, {
-      name: file.name,
-      mimeType: file.type,
-      body: bytes,
-    });
-
-    const attachment = await prisma.attachment.create({
-      data: {
-        driveFileId: stored.id,
-        fileName: stored.name,
-        mimeType: stored.mimeType,
-        sizeBytes: stored.size ?? file.size,
+    // Storing and reading the file need nothing from each other, and the user
+    // is waiting on both, so they run together rather than end to end.
+    //
+    // A reading failure must not lose the upload the user already waited for:
+    // the attachment stands on its own and the line gets filled in by hand,
+    // which is why only the OCR half swallows its error.
+    const [attachment, extraction] = await Promise.all([
+      storeAttachment({
         documentId: id,
-      },
-    });
-
-    // A reading failure must not lose the upload the user already waited for,
-    // so the attachment stands on its own and the line is filled in by hand.
-    let extraction = null;
-    try {
-      extraction = await extractTravelItem({ bytes, mimeType: file.type });
-    } catch (error) {
-      console.error("OCR failed for attachment", attachment.id, error);
-    }
+        fileName: file.name,
+        mimeType: file.type,
+        bytes,
+      }),
+      extractTravelItem({ bytes, mimeType: file.type }).catch((error: unknown) => {
+        console.error("OCR failed for an upload on document", id, error);
+        return null;
+      }),
+    ]);
 
     return NextResponse.json({ attachment, extraction }, { status: 201 });
   } catch (error) {

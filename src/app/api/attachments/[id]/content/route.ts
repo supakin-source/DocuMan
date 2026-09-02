@@ -2,16 +2,14 @@ import { requireUser } from "@/auth";
 import { toErrorResponse } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { getDocumentFor } from "@/lib/domain/documents";
-import { downloadFile } from "@/lib/google/drive";
+import { readAttachment } from "@/lib/storage/attachments";
 
 /**
  * Streams an attachment's bytes.
  *
- * Proxied rather than linked directly to Drive so the same visibility rules
- * apply to the file as to the document it belongs to — an approver can read a
- * claimant's receipt, a stranger cannot — and no Drive token reaches the
- * browser. Fetched with the owner's credentials, since the file lives in their
- * Drive and the approver has no access to it.
+ * Served through here rather than from a public URL so that the same
+ * visibility rules apply to the file as to the document it belongs to — an
+ * approver can read a claimant's receipt, a stranger cannot.
  */
 export async function GET(
   _request: Request,
@@ -23,13 +21,7 @@ export async function GET(
 
     const attachment = await prisma.attachment.findUnique({
       where: { id },
-      select: {
-        driveFileId: true,
-        fileName: true,
-        mimeType: true,
-        documentId: true,
-        document: { select: { ownerId: true } },
-      },
+      select: { documentId: true },
     });
 
     if (!attachment) {
@@ -39,13 +31,18 @@ export async function GET(
     // Throws ForbiddenError unless this user may see the parent document.
     await getDocumentFor(attachment.documentId, user.id);
 
-    const bytes = await downloadFile(attachment.document.ownerId, attachment.driveFileId);
+    const file = await readAttachment(id);
+    if (!file) {
+      // Known attachment, no bytes: it predates Postgres storage and its file
+      // stayed behind in a Drive this app no longer holds a token for.
+      return Response.json({ error: "ไฟล์นี้ไม่มีอยู่ในระบบแล้ว" }, { status: 410 });
+    }
 
-    return new Response(new Uint8Array(bytes), {
+    return new Response(new Uint8Array(file.bytes), {
       headers: {
-        "Content-Type": attachment.mimeType,
-        "Content-Length": String(bytes.byteLength),
-        "Content-Disposition": `inline; filename*=UTF-8''${encodeURIComponent(attachment.fileName)}`,
+        "Content-Type": file.mimeType,
+        "Content-Length": String(file.bytes.byteLength),
+        "Content-Disposition": `inline; filename*=UTF-8''${encodeURIComponent(file.fileName)}`,
         // Contains personal data; keep it out of shared caches.
         "Cache-Control": "private, max-age=300",
       },

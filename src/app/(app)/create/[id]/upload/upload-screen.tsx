@@ -21,12 +21,12 @@ type Extraction = {
 };
 
 type UploadedFile = {
-  /** Local key while in flight; the Drive id once stored. */
+  /** Local key while in flight; `attachmentId` below is the stored row's id. */
   key: string;
   name: string;
   status: "uploading" | "done" | "failed";
   previewUrl: string | null;
-  driveFileId?: string;
+  attachmentId?: string;
   extraction?: Extraction | null;
 };
 
@@ -83,7 +83,7 @@ export function UploadScreen({ documentId }: { documentId: string }) {
 
         try {
           const result = await apiUpload<{
-            attachment: { driveFileId: string; fileName: string };
+            attachment: { id: string; fileName: string };
             extraction: Extraction | null;
           }>(`/api/documents/${documentId}/attachments`, file, controller.signal);
 
@@ -93,7 +93,7 @@ export function UploadScreen({ documentId }: { documentId: string }) {
                 ? {
                     ...entry,
                     status: "done",
-                    driveFileId: result.attachment.driveFileId,
+                    attachmentId: result.attachment.id,
                     extraction: result.extraction,
                   }
                 : entry,
@@ -152,7 +152,7 @@ export function UploadScreen({ documentId }: { documentId: string }) {
         // A zero placeholder keeps the line visible for the user to correct;
         // submission is blocked until every line has a real amount.
         amount: found?.amount ?? 0,
-        driveFileId: file.driveFileId ?? null,
+        attachmentId: file.attachmentId ?? null,
       };
     });
 

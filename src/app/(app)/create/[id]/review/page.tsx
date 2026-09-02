@@ -32,7 +32,6 @@ export default async function ReviewPage({ params }: PageProps<"/create/[id]/rev
     ratePerKm: item.ratePerKm ? String(Number(item.ratePerKm)) : "",
     // Mileage amounts are derived, so the editor leaves that box computed.
     amount: isDerivedAmount(item.type) ? "" : String(Number(item.amount)),
-    driveFileId: item.attachment?.driveFileId ?? null,
     attachmentId: item.attachment?.id ?? null,
     attachmentIsImage: item.attachment?.mimeType.startsWith("image/") ?? false,
   }));
