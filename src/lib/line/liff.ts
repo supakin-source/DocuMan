@@ -29,11 +29,13 @@ const liffEnvSchema = z.object({
   /** The LIFF app's id, used by the browser to boot the SDK. */
   LINE_LIFF_ID: z.string().min(1, "LINE_LIFF_ID is required"),
   /**
-   * Channel id of the LINE Login channel the LIFF app belongs to. It is the
-   * `aud` LINE checks the token against, which is what stops a token minted for
-   * some other app being replayed here.
+   * Channel id of whichever channel the LIFF app was created under — the
+   * Messaging API channel itself when the LIFF app lives on its LIFF tab, which
+   * is the simplest arrangement and the one that keeps user ids consistent for
+   * free. It is the `aud` LINE checks the token against, which is what stops a
+   * token minted for some other app being replayed here.
    */
-  LINE_LOGIN_CHANNEL_ID: z.string().min(1, "LINE_LOGIN_CHANNEL_ID is required"),
+  LINE_LIFF_CHANNEL_ID: z.string().min(1, "LINE_LIFF_CHANNEL_ID is required"),
 });
 
 export type LiffEnv = z.infer<typeof liffEnvSchema>;
@@ -74,7 +76,7 @@ export async function verifyIdToken(idToken: string): Promise<{ lineUserId: stri
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       id_token: idToken,
-      client_id: liffEnv().LINE_LOGIN_CHANNEL_ID,
+      client_id: liffEnv().LINE_LIFF_CHANNEL_ID,
     }),
   });
 

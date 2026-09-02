@@ -82,11 +82,13 @@ Google Cloud project; sign-in and Drive access share a single consent screen.
 prisma/schema.prisma      Database schema
 src/app/(app)/            Signed-in screens, inside the phone frame
 src/app/liff/             The pages the bot links to, opened inside LINE
+src/app/print/[id]/       The bare sheets, for the PDF renderer
 src/app/api/              Route handlers
 src/auth.config.ts        Edge-safe Auth.js config — shared with src/proxy.ts
 src/auth.ts               Full Auth.js config with the Prisma adapter
 src/proxy.ts              Route protection (Next 16 `proxy`, formerly middleware)
 src/components/           Shared UI, including the printable document sheets
+src/lib/documents/        PDF rendering and the signed link it is served on
 src/lib/domain/           Document lifecycle, user administration, the rules
 src/lib/google/           Per-user OAuth client and Drive access
 src/lib/line/             The OA: transport, identity, cards, conversation
@@ -128,13 +130,15 @@ Set up in the [LINE Developers console](https://developers.line.biz/console/):
 a Messaging API channel, with **Auto-reply** and **Greeting messages** turned
 off (they answer over the bot's own replies), and the webhook pointed at
 `https://<app>/api/line/webhook`. `LINE_CHANNEL_SECRET` and
-`LINE_CHANNEL_ACCESS_TOKEN` come from that channel; `LINE_LIFF_ID` and
-`LINE_LOGIN_CHANNEL_ID` come from the LIFF app and the LINE Login channel it
-belongs to.
+`LINE_CHANNEL_ACCESS_TOKEN` come from that channel.
 
-**Both channels must sit under one provider.** The user id in a LIFF ID token
-matches the one on a webhook event only when they do; split across two
-providers, the same person arrives as two unrelated ids and nothing lines up.
+**Create the LIFF app on that same channel's LIFF tab.** No separate LINE Login
+channel is needed, and the arrangement is worth keeping: an ID token's `aud` is
+the channel the LIFF app belongs to, so with one channel `LINE_LIFF_CHANNEL_ID`
+is simply that channel's own Channel ID from Basic settings, and the user id in
+an ID token is the same one the webhook receives. Split the two across separate
+providers and the same person arrives as two unrelated ids, with nothing to
+join them on.
 
 Set the LIFF app's **Endpoint URL to the site root** — `https://<app>`, not
 `https://<app>/liff`. LINE appends the path from a `liff.line.me` link to that
@@ -220,6 +224,35 @@ press a button they could press in the notification is a step for its own sake �
 what the page adds is what a Flex bubble cannot hold: every line, and the
 receipts.
 
+### The finished document
+
+Approving is the moment a claim becomes a document of record: both signatures
+are on it and the status is terminal, so it is the first point at which a PDF
+would not go stale. Every admin who has linked LINE is then pushed a card with
+a link to it.
+
+**A link, not a file.** A LINE bot may send text, images, video, audio,
+stickers, locations, imagemaps, templates and flex messages — none of which is
+a PDF. And the link opens in whatever browser LINE hands the admin, on a phone
+that has never signed into this app, so it carries its own permission: an
+expiry, and an HMAC over both it and the document id. A link cannot be edited
+to point at another claim, cannot be extended, and stops working on its own
+after 45 days. It is signed with `AUTH_SECRET`, so rotating that invalidates
+every outstanding link.
+
+**Rendered by a browser, not by a PDF library.** These are Thai documents of
+record: combining marks sit above and below the base letter, and getting them a
+pixel out is the classic failure of every JS PDF library. A headless Chromium
+is driven over `/print/[id]` — the same signed link lets it in — which also
+gets the real Tailwind output, the vendored Thai fonts and the design's own
+`break-inside: avoid` pagination without a second copy of any of them.
+
+The bytes are cached in `DocumentPdf`, and rendering happens on first open
+rather than at approval: Chromium's cold start is seconds, and the approver is
+waiting on a chat reply. Vercel's Hobby tier caps a function at 10 seconds,
+which a cold render can lose — the cost is a retry, and the second open is
+served from Postgres in milliseconds.
+
 ## Deploying to Vercel
 
 Import the repository in the Vercel dashboard (Add New → Project → this repo).
@@ -230,7 +263,9 @@ Set these under Settings → Environment Variables:
 `DATABASE_URL`, `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`,
 `GOOGLE_GENAI_API_KEY`, `ALLOWED_EMAIL_DOMAINS`, `AUTH_TRUST_HOST=true`, and —
 for the OA — `LINE_CHANNEL_SECRET`, `LINE_CHANNEL_ACCESS_TOKEN`, `LINE_LIFF_ID`,
-`LINE_LOGIN_CHANNEL_ID` and `APP_URL` set to the stable production URL.
+`LINE_LIFF_CHANNEL_ID` and `APP_URL` set to the stable production URL.
+`CHROMIUM_EXECUTABLE_PATH` is for development only — leave it unset there, so
+`@sparticuz/chromium` supplies the browser built for the serverless runtime.
 Skipping `ALLOWED_EMAIL_DOMAINS` opens sign-in to any Google account, not just
 the company domain — `src/lib/env.ts` treats an empty value as "allow all".
 

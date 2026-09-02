@@ -6,6 +6,7 @@ import { summariseMonth } from "@/lib/domain/stats";
 import type { DraftLine, DraftState } from "@/lib/line/claim";
 import {
   approvalRequestCard,
+  approvedDocumentCard,
   draftCard,
   monthSummaryCard,
   reasonPicker,
@@ -88,6 +89,17 @@ const CARDS: [string, Record<string, unknown>][] = [
       total: 159,
     }),
   ],
+  [
+    "approvedDocumentCard",
+    approvedDocumentCard({
+      docNo: "CPC-2026-000512",
+      requesterName: "ณัฐวุฒิ ศรีสุข",
+      approverName: "สุพจน์ วงศ์เจริญ",
+      total: 209,
+      url: "https://documan.example/api/documents/doc-1/pdf?e=1&t=abc",
+      expiresAt: new Date("2026-10-17T00:00:00.000Z"),
+    }),
+  ],
   ["reasonPicker, return", reasonPicker("doc-1", "return")],
   ["reasonPicker, reject", reasonPicker("doc-1", "reject")],
   ["monthSummaryCard, current month", monthSummaryCard(summariseMonth([], 0), 0)],
@@ -148,5 +160,26 @@ describe("Flex cards", () => {
       .map((postback) => (postback?.action === "summary" ? postback.offset : null));
 
     assert.deepEqual(offsets, [-4, -2]);
+  });
+
+  it("gives the admin a link and no button that decides anything", () => {
+    // The claim is already approved by the time this is sent. A postback here
+    // would be a second verdict on a document that is past deciding.
+    const card = approvedDocumentCard({
+      docNo: "CPC-2026-000512",
+      requesterName: "ณัฐวุฒิ ศรีสุข",
+      approverName: "สุพจน์ วงศ์เจริญ",
+      total: 209,
+      url: "https://documan.example/api/documents/doc-1/pdf?e=1&t=abc",
+      expiresAt: new Date("2026-10-17T00:00:00.000Z"),
+    });
+
+    assert.deepEqual(postbackData(card), []);
+
+    const links = actionsIn(card)
+      .filter((action) => action.type === "uri")
+      .map((action) => String(action.uri));
+
+    assert.deepEqual(links, ["https://documan.example/api/documents/doc-1/pdf?e=1&t=abc"]);
   });
 });

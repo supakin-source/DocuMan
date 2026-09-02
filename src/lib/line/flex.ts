@@ -397,6 +397,63 @@ export function reasonPicker(documentId: string, verdict: "return" | "reject"): 
   return flex(verdict === "return" ? "เลือกเหตุผลที่ส่งกลับ" : "เลือกเหตุผลที่ไม่อนุมัติ", bubble(body));
 }
 
+/**
+ * Sent to the admins once a claim is approved, with the finished document.
+ *
+ * A link, not a file: a LINE bot may send text, images, video, audio, stickers,
+ * locations, imagemaps, templates and flex messages, and none of those is a
+ * PDF. The link is signed and expires, which is what makes it safe to hand to a
+ * browser that has never signed into this app.
+ */
+export function approvedDocumentCard(input: {
+  docNo: string | null;
+  requesterName: string;
+  approverName: string;
+  total: number;
+  url: string;
+  expiresAt: Date;
+}): LineMessage {
+  const body: Box = {
+    type: "box",
+    layout: "vertical",
+    spacing: "sm",
+    contents: [
+      label("อนุมัติแล้ว"),
+      {
+        type: "text",
+        text: input.docNo ?? "เอกสารเบิกค่าเดินทาง",
+        weight: "bold",
+        size: "md",
+        color: TEXT,
+        wrap: true,
+      },
+      separator(),
+      row("ผู้จัดทำ", input.requesterName),
+      row("ผู้อนุมัติ", input.approverName),
+      row("ยอดรวม", `฿${formatMoney(input.total)}`),
+      {
+        type: "text",
+        text: `ลิงก์ใช้ได้ถึง ${formatThaiDate(input.expiresAt)}`,
+        size: "xs",
+        color: MUTED,
+        margin: "md",
+        wrap: true,
+      },
+    ],
+  };
+
+  const footer: Box = {
+    type: "box",
+    layout: "vertical",
+    contents: [button("เปิดไฟล์ PDF", { type: "uri", uri: input.url }, "primary")],
+  };
+
+  return flex(
+    `${input.requesterName} · ${input.docNo ?? "เอกสารเบิก"} อนุมัติแล้ว ฿${formatMoney(input.total)}`,
+    bubble(body, footer),
+  );
+}
+
 /** The approver's monthly total, with the neighbouring months a tap away. */
 export function monthSummaryCard(stats: MonthStats, offset: number): LineMessage {
   const body: Box = {

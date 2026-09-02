@@ -31,6 +31,25 @@ export function isApprover(user: LineUser): boolean {
   return user.roles.includes(AppRole.APPROVER);
 }
 
+/**
+ * The admins the approved document is sent to.
+ *
+ * Only those who have linked LINE, because there is nowhere else to send it —
+ * an admin who has not linked is not a failure to report to the approver, who
+ * cannot do anything about it, but it is worth a line in the log.
+ */
+export async function listAdminLineIds(): Promise<string[]> {
+  const admins = await prisma.user.findMany({
+    where: { roles: { has: AppRole.ADMIN }, lineUserId: { not: null } },
+    select: { lineUserId: true },
+    orderBy: { email: "asc" },
+  });
+
+  return admins
+    .map((admin) => admin.lineUserId)
+    .filter((id): id is string => Boolean(id));
+}
+
 export function isAdmin(user: LineUser): boolean {
   return user.roles.includes(AppRole.ADMIN);
 }

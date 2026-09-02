@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { pdfLink } from "@/lib/documents/pdf-link";
 import {
   decideDocument,
   listApprovedByApprover,
@@ -23,12 +24,13 @@ import {
 import { push, replyOrPush, type LineMessage } from "@/lib/line/client";
 import {
   approvalRequestCard,
+  approvedDocumentCard,
   draftCard,
   monthSummaryCard,
   reasonPicker,
   receiptCard,
 } from "@/lib/line/flex";
-import { isApprover, type LineUser } from "@/lib/line/identity";
+import { isApprover, listAdminLineIds, type LineUser } from "@/lib/line/identity";
 import { decodePostback, type Postback } from "@/lib/line/postback";
 import { formatMoney } from "@/lib/thai";
 
@@ -366,11 +368,60 @@ async function decide(
     }
   }
 
+  if (verdict === "approve") {
+    await notifyAdmins(document, user.name ?? "ผู้อนุมัติ");
+  }
+
   return [
     text(
       `บันทึกแล้ว: ${VERDICT_WORD[verdict]} เอกสาร ${document.docNo ?? ""} ฿${formatMoney(Number(document.totalAmount))}`.trim(),
     ),
   ];
+}
+
+/**
+ * Hands the finished document to whoever files it.
+ *
+ * Approval is the moment it becomes one: both signatures are on it and the
+ * status is terminal, so this is the first point at which a PDF would not go
+ * stale. The link is pushed without rendering first — Chromium's cold start is
+ * seconds and the approver is waiting on this reply — so the file is built by
+ * whichever admin opens the link, and cached from then on.
+ *
+ * Failures are logged and swallowed, as with the other pushes here: the claim
+ * is approved either way, and an admin who never got the message can still be
+ * sent the link again.
+ */
+async function notifyAdmins(
+  document: Awaited<ReturnType<typeof decideDocument>>,
+  approverName: string,
+): Promise<void> {
+  const admins = await listAdminLineIds();
+
+  if (admins.length === 0) {
+    console.warn("No admin has linked LINE; nobody was sent", document.docNo);
+    return;
+  }
+
+  const { url, expiresAt } = pdfLink(document.id);
+  const card = approvedDocumentCard({
+    docNo: document.docNo,
+    requesterName: document.owner.name ?? "ผู้จัดทำ",
+    approverName,
+    total: Number(document.totalAmount),
+    url,
+    expiresAt,
+  });
+
+  // One at a time rather than a multicast: an admin who has blocked the OA
+  // must not stop the message reaching the others.
+  for (const lineUserId of admins) {
+    try {
+      await push(lineUserId, [card]);
+    } catch (error) {
+      console.error("Could not send the approved document to an admin", error);
+    }
+  }
 }
 
 // ─── The approver's month ─────────────────────────────────────────────────

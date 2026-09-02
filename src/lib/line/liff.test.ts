@@ -12,7 +12,7 @@ import { ForbiddenError } from "@/lib/domain/errors";
  * module is imported below.
  */
 process.env.LINE_LIFF_ID = "1234567890-abcdefgh";
-process.env.LINE_LOGIN_CHANNEL_ID = "1234567890";
+process.env.LINE_LIFF_CHANNEL_ID = "1234567890";
 
 type LiffModule = typeof import("@/lib/line/liff");
 
