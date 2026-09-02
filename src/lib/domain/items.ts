@@ -53,22 +53,32 @@ export function computeItemAmount(input: {
 
 const money = z.number().nonnegative().finite();
 
-/** One line as submitted by the client. */
-export const expenseItemInputSchema = z
-  .object({
-    type: z.enum(ExpenseItemType),
-    /** Calendar date, no time component: "2026-07-28". */
-    incurredOn: z.iso.date(),
-    origin: z.string().trim().max(200).nullish(),
-    destination: z.string().trim().max(200).nullish(),
-    purpose: z.string().trim().max(200).nullish(),
-    distanceKm: money.max(100_000).nullish(),
-    ratePerKm: money.max(1_000).nullish(),
-    /** Ignored for mileage lines, which are always derived. */
-    amount: money.max(10_000_000).nullish(),
-    /** Attachment row backing this line, when a file was uploaded for it. */
-    attachmentId: z.string().min(1).nullish(),
-  })
+/**
+ * One line's fields, without the completeness rules below.
+ *
+ * Split out because the two ways of editing a line want different strictness.
+ * A web form collects a whole claim and is checked before it is stored; the
+ * LINE flow stores what OCR could read and lets the user finish it later, so a
+ * half-filled line has to survive being saved. `submitDocument` is the gate
+ * either way — nothing incomplete reaches an approver.
+ */
+export const expenseItemFieldsSchema = z.object({
+  type: z.enum(ExpenseItemType),
+  /** Calendar date, no time component: "2026-07-28". */
+  incurredOn: z.iso.date(),
+  origin: z.string().trim().max(200).nullish(),
+  destination: z.string().trim().max(200).nullish(),
+  purpose: z.string().trim().max(200).nullish(),
+  distanceKm: money.max(100_000).nullish(),
+  ratePerKm: money.max(1_000).nullish(),
+  /** Ignored for mileage lines, which are always derived. */
+  amount: money.max(10_000_000).nullish(),
+  /** Attachment row backing this line, when a file was uploaded for it. */
+  attachmentId: z.string().min(1).nullish(),
+});
+
+/** One line as submitted by the client, complete enough to stand on its own. */
+export const expenseItemInputSchema = expenseItemFieldsSchema
   .superRefine((item, ctx) => {
     if (isDerivedAmount(item.type)) {
       if (!item.distanceKm) {
@@ -97,4 +107,5 @@ export const expenseItemInputSchema = z
     }
   });
 
+export type ExpenseItemFields = z.infer<typeof expenseItemFieldsSchema>;
 export type ExpenseItemInput = z.infer<typeof expenseItemInputSchema>;

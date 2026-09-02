@@ -81,6 +81,7 @@ Google Cloud project; sign-in and Drive access share a single consent screen.
 ```
 prisma/schema.prisma      Database schema
 src/app/(app)/            Signed-in screens, inside the phone frame
+src/app/liff/             The pages the bot links to, opened inside LINE
 src/app/api/              Route handlers
 src/auth.config.ts        Edge-safe Auth.js config — shared with src/proxy.ts
 src/auth.ts               Full Auth.js config with the Prisma adapter
@@ -127,8 +128,13 @@ Set up in the [LINE Developers console](https://developers.line.biz/console/):
 a Messaging API channel, with **Auto-reply** and **Greeting messages** turned
 off (they answer over the bot's own replies), and the webhook pointed at
 `https://<app>/api/line/webhook`. `LINE_CHANNEL_SECRET` and
-`LINE_CHANNEL_ACCESS_TOKEN` come from that channel; `LINE_LIFF_ID` comes from
-the LIFF tab of the same one.
+`LINE_CHANNEL_ACCESS_TOKEN` come from that channel; `LINE_LIFF_ID` and
+`LINE_LOGIN_CHANNEL_ID` come from the LIFF app and the LINE Login channel it
+belongs to.
+
+**Both channels must sit under one provider.** The user id in a LIFF ID token
+matches the one on a webhook event only when they do; split across two
+providers, the same person arrives as two unrelated ids and nothing lines up.
 
 ### The conversation
 
@@ -175,6 +181,33 @@ window, so `User.signature` is what submitting and approving sign with. It is
 copied onto the document at that moment rather than referenced, so redrawing it
 later does not rewrite claims already signed with the old mark.
 
+### The pages inside LINE
+
+Three things do not fit in a chat bubble, and each is a LIFF page the bot links
+to: drawing a signature, correcting a line OCR misread, and reading a whole
+claim before deciding on it.
+
+| Page | For |
+| ---- | --- |
+| `/liff/signature`      | Draw or redraw the stored signature |
+| `/liff/items/[id]`     | Fix one line, against the receipt beside it |
+| `/liff/documents/[id]` | The claim in full, for the approver |
+
+**A web page carries no envelope.** The webhook can trust a `userId` because
+LINE signs the delivery; anything a browser sends is written by the browser, and
+a page that believed a `?user=` parameter would let anyone sign as anyone else.
+So these pages authenticate with a LIFF **ID token** — a JWT LINE issues naming
+the person viewing — handed to LINE's own `/oauth2/v2.1/verify` to check rather
+than verified here, since LINE holds the key and decides the audience and
+expiry. The identity that comes back is still only a LINE id, and still has to
+resolve to an account an admin linked: the token proves who is holding the
+phone, not that they work here.
+
+The decision itself stays in the chat. Sending an approver to a web page to
+press a button they could press in the notification is a step for its own sake —
+what the page adds is what a Flex bubble cannot hold: every line, and the
+receipts.
+
 ## Deploying to Vercel
 
 Import the repository in the Vercel dashboard (Add New → Project → this repo).
@@ -184,8 +217,8 @@ Next.js needs no configuration file there: Vercel detects the framework, runs
 Set these under Settings → Environment Variables:
 `DATABASE_URL`, `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`,
 `GOOGLE_GENAI_API_KEY`, `ALLOWED_EMAIL_DOMAINS`, `AUTH_TRUST_HOST=true`, and —
-for the OA — `LINE_CHANNEL_SECRET`, `LINE_CHANNEL_ACCESS_TOKEN`, `LINE_LIFF_ID`
-and `APP_URL` set to the stable production URL.
+for the OA — `LINE_CHANNEL_SECRET`, `LINE_CHANNEL_ACCESS_TOKEN`, `LINE_LIFF_ID`,
+`LINE_LOGIN_CHANNEL_ID` and `APP_URL` set to the stable production URL.
 Skipping `ALLOWED_EMAIL_DOMAINS` opens sign-in to any Google account, not just
 the company domain — `src/lib/env.ts` treats an empty value as "allow all".
 

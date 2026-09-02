@@ -17,6 +17,7 @@ import {
 import {
   computeItemAmount,
   expenseItemInputSchema,
+  type ExpenseItemFields,
   type ExpenseItemInput,
 } from "@/lib/domain/items";
 
@@ -307,6 +308,70 @@ export async function appendItem(
     await recalculateTotal(tx, documentId);
     return created;
   });
+}
+
+/**
+ * Rewrites one line, wholesale.
+ *
+ * The correction screen shows the whole line and hands the whole line back, so
+ * there is nothing to diff. `sortOrder` and the attachment are untouched: the
+ * user is fixing what OCR read off a receipt, not moving the line or swapping
+ * the receipt behind it.
+ */
+export async function updateItem(
+  itemId: string,
+  userId: string,
+  input: ExpenseItemFields,
+): Promise<string> {
+  const item = await prisma.expenseItem.findUnique({
+    where: { id: itemId },
+    select: {
+      documentId: true,
+      sortOrder: true,
+      document: { select: { ownerId: true, status: true } },
+    },
+  });
+
+  if (!item) throw new NotFoundError();
+  if (item.document.ownerId !== userId) throw new ForbiddenError();
+  if (!EDITABLE_STATUSES.includes(item.document.status)) {
+    throw new InvalidStateError("เอกสารนี้ส่งอนุมัติแล้ว ไม่สามารถแก้ไขได้");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.expenseItem.update({
+      where: { id: itemId },
+      data: toItemCreate(input, item.sortOrder),
+    });
+    await recalculateTotal(tx, item.documentId);
+  });
+
+  return item.documentId;
+}
+
+/** One line and the receipt behind it, for the correction screen. */
+export async function getItemFor(itemId: string, userId: string) {
+  const item = await prisma.expenseItem.findUnique({
+    where: { id: itemId },
+    select: {
+      id: true,
+      type: true,
+      incurredOn: true,
+      origin: true,
+      destination: true,
+      purpose: true,
+      distanceKm: true,
+      ratePerKm: true,
+      amount: true,
+      attachment: { select: { id: true, mimeType: true } },
+      document: { select: { id: true, ownerId: true, status: true } },
+    },
+  });
+
+  if (!item) throw new NotFoundError();
+  if (item.document.ownerId !== userId) throw new ForbiddenError();
+
+  return item;
 }
 
 /** Removes one line from a draft. Silent when the line is already gone. */
