@@ -1,0 +1,406 @@
+import { prisma } from "@/lib/db";
+import {
+  decideDocument,
+  listApprovedByApprover,
+  removeItem,
+  toBytes,
+} from "@/lib/domain/documents";
+import {
+  ForbiddenError,
+  InvalidStateError,
+  NotFoundError,
+  ValidationError,
+} from "@/lib/domain/errors";
+import { summariseMonth } from "@/lib/domain/stats";
+import { liffUrl } from "@/lib/env";
+import {
+  addReceipt,
+  currentDocumentId,
+  readDraft,
+  startNewDraft,
+  submitClaim,
+} from "@/lib/line/claim";
+import { push, replyOrPush, type LineMessage } from "@/lib/line/client";
+import {
+  approvalRequestCard,
+  draftCard,
+  monthSummaryCard,
+  reasonPicker,
+  receiptCard,
+} from "@/lib/line/flex";
+import { isApprover, type LineUser } from "@/lib/line/identity";
+import { decodePostback, type Postback } from "@/lib/line/postback";
+import { formatMoney } from "@/lib/thai";
+
+/**
+ * What each kind of message means, and what the bot does about it.
+ *
+ * Everything here answers through `replyOrPush`, which keeps one property true
+ * across the whole flow: a tap or a photo always gets a visible answer, even
+ * when the work behind it outran the reply token. A chat that silently does
+ * nothing is indistinguishable from a chat that is broken.
+ */
+
+export function text(value: string): LineMessage {
+  return { type: "text", text: value };
+}
+
+// ─── Text ─────────────────────────────────────────────────────────────────
+
+/**
+ * Commands, matched on a substring rather than an exact string.
+ *
+ * People type "ขอสรุปยอดหน่อย", not "สรุป". The list is ordered, so the more
+ * specific phrase has to come first where two overlap.
+ */
+const COMMANDS: { match: string[]; command: Command }[] = [
+  { match: ["เริ่มใหม่", "สร้างใหม่", "ใบใหม่"], command: "new" },
+  { match: ["ส่งอนุมัติ", "ส่งเบิก", "ขออนุมัติ"], command: "submit" },
+  { match: ["สรุป", "ยอดเดือน", "ยอดรวม"], command: "summary" },
+  { match: ["รายการ", "เอกสาร", "ตรวจสอบ"], command: "draft" },
+  { match: ["ลายเซ็น", "เซ็นชื่อ"], command: "signature" },
+  { match: ["ช่วย", "ทำอะไรได้", "วิธีใช้", "help"], command: "help" },
+];
+
+type Command = "new" | "submit" | "summary" | "draft" | "signature" | "help";
+
+export function commandFor(message: string): Command | null {
+  const normalised = message.trim().toLowerCase();
+  if (!normalised) return null;
+
+  for (const entry of COMMANDS) {
+    if (entry.match.some((phrase) => normalised.includes(phrase))) {
+      return entry.command;
+    }
+  }
+
+  return null;
+}
+
+export async function handleText(
+  user: LineUser,
+  lineUserId: string,
+  replyToken: string,
+  message: string,
+): Promise<void> {
+  const command = commandFor(message) ?? "help";
+
+  switch (command) {
+    case "new": {
+      const documentId = await startNewDraft(user.id);
+      const state = await readDraft(documentId);
+      await replyOrPush(replyToken, lineUserId, [
+        text("เริ่มเอกสารใหม่แล้ว ส่งรูปใบเสร็จหรือสกรีนช็อตเส้นทางเข้ามาได้เลย"),
+        ...(state ? [draftCard(state)] : []),
+      ]);
+      return;
+    }
+
+    case "submit": {
+      const documentId = await currentDocumentId(user.id);
+      await replyOrPush(replyToken, lineUserId, await submitMessages(user, documentId));
+      return;
+    }
+
+    case "summary":
+      await replyOrPush(replyToken, lineUserId, await summaryMessages(user, 0));
+      return;
+
+    case "draft": {
+      const documentId = await currentDocumentId(user.id);
+      const state = await readDraft(documentId);
+      await replyOrPush(
+        replyToken,
+        lineUserId,
+        state ? [draftCard(state)] : [text("ยังไม่มีเอกสารที่กำลังทำอยู่")],
+      );
+      return;
+    }
+
+    case "signature":
+      await replyOrPush(replyToken, lineUserId, [signatureMessage()]);
+      return;
+
+    case "help":
+      await replyOrPush(replyToken, lineUserId, [text(helpText(user))]);
+  }
+}
+
+export function helpText(user: LineUser): string {
+  const lines = [
+    "ระบบเบิกค่าเดินทาง DocuMan",
+    "",
+    "ส่งรูปใบเสร็จ ตั๋ว สลิปทางด่วน หรือสกรีนช็อตเส้นทางเข้ามาได้เลย ระบบจะอ่านข้อมูลและเพิ่มเป็นรายการให้อัตโนมัติ",
+    "",
+    "คำสั่งที่ใช้ได้",
+    "• “รายการ” — ดูเอกสารที่กำลังรวบรวม",
+    "• “ส่งอนุมัติ” — ส่งเอกสารให้ผู้อนุมัติ",
+    "• “เริ่มใหม่” — เริ่มเอกสารใบใหม่",
+    "• “ลายเซ็น” — บันทึกหรือแก้ไขลายเซ็น",
+  ];
+
+  if (isApprover(user)) {
+    lines.push("• “สรุป” — ยอดที่อนุมัติในเดือนนี้");
+  }
+
+  return lines.join("\n");
+}
+
+function signatureMessage(): LineMessage {
+  return {
+    type: "template",
+    altText: "บันทึกลายเซ็น",
+    template: {
+      type: "buttons",
+      text: "ลายเซ็นจะถูกบันทึกไว้ครั้งเดียว และนำไปใช้กับเอกสารทุกใบ แก้ไขภายหลังได้",
+      actions: [{ type: "uri", label: "เปิดหน้าลายเซ็น", uri: liffUrl("/liff/signature") }],
+    },
+  };
+}
+
+// ─── Images ───────────────────────────────────────────────────────────────
+
+export async function handleImage(
+  user: LineUser,
+  lineUserId: string,
+  replyToken: string,
+  messageId: string,
+): Promise<void> {
+  const { itemId, state } = await addReceipt({ userId: user.id, messageId });
+  const line = state.lines.find((candidate) => candidate.id === itemId);
+
+  await replyOrPush(
+    replyToken,
+    lineUserId,
+    line ? [receiptCard(line, state)] : [draftCard(state)],
+  );
+}
+
+// ─── Buttons ──────────────────────────────────────────────────────────────
+
+export async function handlePostback(
+  user: LineUser,
+  lineUserId: string,
+  replyToken: string,
+  data: string,
+): Promise<void> {
+  const postback = decodePostback(data);
+
+  if (!postback) {
+    // Most often an old card tapped after a deploy changed the vocabulary.
+    await replyOrPush(replyToken, lineUserId, [
+      text("ปุ่มนี้ใช้ไม่ได้แล้ว พิมพ์ “รายการ” เพื่อดูเอกสารล่าสุด"),
+    ]);
+    return;
+  }
+
+  await replyOrPush(replyToken, lineUserId, await postbackMessages(user, postback));
+}
+
+async function postbackMessages(
+  user: LineUser,
+  postback: Postback,
+): Promise<LineMessage[]> {
+  switch (postback.action) {
+    case "submit":
+      return submitMessages(user, postback.documentId);
+
+    case "discard": {
+      // Deleted rather than kept as an abandoned DRAFT: an empty shell would
+      // still be the "most recently touched editable document", and the next
+      // photo would land on the claim the user just threw away.
+      const deleted = await prisma.expenseDocument.deleteMany({
+        where: {
+          id: postback.documentId,
+          ownerId: user.id,
+          status: "DRAFT",
+        },
+      });
+
+      return [
+        text(
+          deleted.count > 0
+            ? "ยกเลิกเอกสารแล้ว ส่งรูปใหม่เข้ามาเพื่อเริ่มใบถัดไปได้เลย"
+            : "เอกสารนี้ยกเลิกไม่ได้แล้ว",
+        ),
+      ];
+    }
+
+    case "remove": {
+      const documentId = await removeItem(postback.itemId, user.id);
+      const state = await readDraft(documentId);
+      return state ? [text("ลบรายการแล้ว"), draftCard(state)] : [text("ลบรายการแล้ว")];
+    }
+
+    case "decide":
+      if (postback.verdict !== "approve") {
+        return [reasonPicker(postback.documentId, postback.verdict)];
+      }
+      return decide(user, postback.documentId, "approve", null);
+
+    case "reason":
+      return decide(user, postback.documentId, postback.verdict, postback.reason);
+
+    case "summary":
+      return summaryMessages(user, postback.offset);
+  }
+}
+
+// ─── The two transitions ──────────────────────────────────────────────────
+
+/**
+ * Submits, and tells the approver.
+ *
+ * The approver's notification is pushed after the fact and its failure is
+ * swallowed: the claim is already submitted and visible in their queue, and
+ * throwing here would tell the requester their submission failed when it did
+ * not.
+ */
+async function submitMessages(user: LineUser, documentId: string): Promise<LineMessage[]> {
+  let result: Awaited<ReturnType<typeof submitClaim>>;
+
+  try {
+    result = await submitClaim(user.id, documentId);
+  } catch (error) {
+    if (error instanceof ValidationError && error.message === "SIGNATURE_REQUIRED") {
+      return [
+        text("ยังไม่ได้บันทึกลายเซ็น ต้องเซ็นครั้งแรกก่อนส่งอนุมัติ"),
+        signatureMessage(),
+      ];
+    }
+    return [text(messageFor(error))];
+  }
+
+  const state = await readDraft(documentId);
+
+  if (result.approverLineUserId) {
+    try {
+      await push(result.approverLineUserId, [
+        approvalRequestCard({
+          documentId,
+          docNo: result.docNo,
+          requesterName: result.requesterName ?? "ผู้จัดทำ",
+          itemCount: state?.lines.length ?? 0,
+          total: result.total,
+        }),
+      ]);
+    } catch (error) {
+      console.error("Could not notify the approver for", documentId, error);
+    }
+  }
+
+  return [
+    text(
+      [
+        `ส่งอนุมัติแล้ว เลขที่ ${result.docNo ?? "—"}`,
+        `ยอดรวม ฿${formatMoney(result.total)}`,
+        result.approverLineUserId
+          ? `แจ้ง ${result.approverName ?? "ผู้อนุมัติ"} ทางไลน์แล้ว`
+          : `รอ ${result.approverName ?? "ผู้อนุมัติ"} พิจารณา (ยังไม่ได้เชื่อมบัญชีไลน์)`,
+      ].join("\n"),
+    ),
+  ];
+}
+
+const VERDICT_WORD = {
+  approve: "อนุมัติ",
+  return: "ส่งกลับให้แก้ไข",
+  reject: "ไม่อนุมัติ",
+} as const;
+
+/** Records the approver's verdict and tells the requester what it was. */
+async function decide(
+  user: LineUser,
+  documentId: string,
+  verdict: "approve" | "return" | "reject",
+  reason: string | null,
+): Promise<LineMessage[]> {
+  const approver = await prisma.user.findUniqueOrThrow({
+    where: { id: user.id },
+    select: { signature: true },
+  });
+
+  if (verdict === "approve" && !approver.signature?.byteLength) {
+    return [
+      text("ยังไม่ได้บันทึกลายเซ็นผู้อนุมัติ ต้องเซ็นครั้งแรกก่อนอนุมัติ"),
+      signatureMessage(),
+    ];
+  }
+
+  let document: Awaited<ReturnType<typeof decideDocument>>;
+  try {
+    document = await decideDocument(documentId, user.id, {
+      decision: verdict,
+      reason,
+      comment: null,
+      signature:
+        verdict === "approve" && approver.signature
+          ? toBytes(approver.signature)
+          : null,
+    });
+  } catch (error) {
+    return [text(messageFor(error))];
+  }
+
+  const owner = await prisma.user.findUnique({
+    where: { id: document.ownerId },
+    select: { lineUserId: true },
+  });
+
+  if (owner?.lineUserId) {
+    try {
+      await push(owner.lineUserId, [
+        text(
+          [
+            `เอกสาร ${document.docNo ?? ""} ${VERDICT_WORD[verdict]}`.trim(),
+            `ยอดรวม ฿${formatMoney(Number(document.totalAmount))}`,
+            ...(reason ? [`เหตุผล: ${reason}`] : []),
+            ...(verdict === "return"
+              ? ["แก้ไขแล้วส่งรูปหรือพิมพ์ “ส่งอนุมัติ” เพื่อส่งใหม่ได้เลย"]
+              : []),
+          ].join("\n"),
+        ),
+      ]);
+    } catch (error) {
+      console.error("Could not notify the requester for", documentId, error);
+    }
+  }
+
+  return [
+    text(
+      `บันทึกแล้ว: ${VERDICT_WORD[verdict]} เอกสาร ${document.docNo ?? ""} ฿${formatMoney(Number(document.totalAmount))}`.trim(),
+    ),
+  ];
+}
+
+// ─── The approver's month ─────────────────────────────────────────────────
+
+async function summaryMessages(user: LineUser, offset: number): Promise<LineMessage[]> {
+  if (!isApprover(user)) {
+    return [text("สรุปยอดเป็นข้อมูลของผู้อนุมัติ บัญชีนี้ยังไม่ได้รับสิทธิ์นั้น")];
+  }
+
+  const approved = await listApprovedByApprover(user.id);
+  return [monthSummaryCard(summariseMonth(approved, offset), offset)];
+}
+
+// ─── Errors, in the user's words ──────────────────────────────────────────
+
+/**
+ * Domain errors already carry a Thai message written for the person reading it,
+ * so they are passed through. Anything else is a bug, and says so plainly
+ * rather than leaking a stack trace into a chat window.
+ */
+function messageFor(error: unknown): string {
+  if (
+    error instanceof ValidationError ||
+    error instanceof InvalidStateError ||
+    error instanceof NotFoundError ||
+    error instanceof ForbiddenError
+  ) {
+    return error.message;
+  }
+
+  console.error("Unexpected failure handling a LINE action", error);
+  return "ระบบขัดข้อง กรุณาลองใหม่อีกครั้ง";
+}

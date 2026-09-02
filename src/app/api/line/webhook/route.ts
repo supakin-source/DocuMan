@@ -1,11 +1,19 @@
 import { reply, verifySignature, type LineMessage } from "@/lib/line/client";
 import {
   isFollowEvent,
+  isImageMessage,
   isMessageEvent,
+  isPostbackEvent,
   isTextMessage,
   type LineEvent,
   type LineWebhookBody,
 } from "@/lib/line/events";
+import {
+  handleImage,
+  handlePostback,
+  handleText,
+  helpText,
+} from "@/lib/line/handlers";
 import { findUserByLineId } from "@/lib/line/identity";
 
 /**
@@ -63,18 +71,33 @@ async function handleEvent(event: LineEvent): Promise<void> {
   }
 
   if (isFollowEvent(event)) {
-    await reply(replyToken, [text(`ยินดีต้อนรับกลับครับ ${user.name ?? ""}`.trim())]);
+    await reply(replyToken, [
+      text(`ยินดีต้อนรับกลับครับ ${user.name ?? ""}`.trim()),
+      text(helpText(user)),
+    ]);
     return;
   }
 
-  if (isMessageEvent(event) && isTextMessage(event.message)) {
-    await reply(replyToken, [text(helpText())]);
+  if (isPostbackEvent(event)) {
+    await handlePostback(user, lineUserId, replyToken, event.postback.data);
     return;
   }
 
-  // Receipts, buttons and the monthly summary land here once the claim flow is
-  // built; until then the bot says what it can do rather than going quiet.
-  await reply(replyToken, [text(helpText())]);
+  if (isMessageEvent(event)) {
+    if (isImageMessage(event.message)) {
+      await handleImage(user, lineUserId, replyToken, event.message.id);
+      return;
+    }
+
+    if (isTextMessage(event.message)) {
+      await handleText(user, lineUserId, replyToken, event.message.text);
+      return;
+    }
+
+    // A sticker or a voice note is not an error, but it is not a receipt
+    // either — say what would work instead of ignoring it.
+    await reply(replyToken, [text(helpText(user))]);
+  }
 }
 
 function text(value: string): LineMessage {
@@ -94,13 +117,4 @@ function unlinkedMessages(lineUserId: string): LineMessage[] {
     ),
     text(lineUserId),
   ];
-}
-
-function helpText(): string {
-  return [
-    "ระบบเบิกค่าเดินทาง DocuMan",
-    "",
-    "ส่งรูปใบเสร็จหรือสกรีนช็อตเส้นทางเข้ามาได้เลย ระบบจะอ่านข้อมูลให้อัตโนมัติ",
-    "(ส่วนนี้กำลังพัฒนา จะเปิดใช้งานเร็ว ๆ นี้)",
-  ].join("\n");
 }

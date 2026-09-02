@@ -88,6 +88,7 @@ src/proxy.ts              Route protection (Next 16 `proxy`, formerly middleware
 src/components/           Shared UI, including the printable document sheets
 src/lib/domain/           Document lifecycle, user administration, the rules
 src/lib/google/           Per-user OAuth client and Drive access
+src/lib/line/             The OA: transport, identity, cards, conversation
 src/lib/ocr/              Text and structured extraction via Gemini
 src/lib/thai.ts           Buddhist Era dates and baht-in-words
 scripts/grant-admin.ts    Bootstraps the first admin
@@ -120,14 +121,40 @@ design/                   The Claude Design export this is implemented against
 
 The workflow is moving into a LINE Official Account: receipts are sent to the
 bot, and the claim is built, corrected and decided there rather than in the web
-screens. This part is under construction — the webhook currently authenticates
-callers and answers, and the claim flow lands on top of it.
+screens.
 
 Set up in the [LINE Developers console](https://developers.line.biz/console/):
 a Messaging API channel, with **Auto-reply** and **Greeting messages** turned
 off (they answer over the bot's own replies), and the webhook pointed at
 `https://<app>/api/line/webhook`. `LINE_CHANNEL_SECRET` and
-`LINE_CHANNEL_ACCESS_TOKEN` come from that channel.
+`LINE_CHANNEL_ACCESS_TOKEN` come from that channel; `LINE_LIFF_ID` comes from
+the LIFF tab of the same one.
+
+### The conversation
+
+Send a photo — a receipt, a ticket, a toll slip, a screenshot of a map route —
+and it becomes a line on the current claim, read by Gemini and answered with a
+card showing what was found and what was not. Everything else is a command,
+matched on a phrase rather than an exact string, since people type sentences:
+
+| Say | What happens |
+| --- | ------------ |
+| “รายการ”     | The claim as it stands, with its total |
+| “ส่งอนุมัติ”   | Signs it with the stored signature and sends it |
+| “เริ่มใหม่”    | Starts a fresh claim |
+| “ลายเซ็น”     | Opens the page to draw or redraw the signature |
+| “สรุป”        | The month's approved total (approvers only) |
+
+**There is no "current claim" table.** It is derived: the most recently touched
+document that is still editable. That is the draft being built — or the document
+an approver has just sent back, which is precisely what the next photo is for.
+
+**A line may be incomplete.** OCR misreads a crumpled receipt often enough that
+refusing the upload would be worse than accepting a line with a hole in it, so
+the card names what is missing and `submitDocument` refuses the claim until it
+is filled in. Nothing incomplete can reach an approver.
+
+### Identity and signatures
 
 **Identity has no sign-in.** The only evidence of who is talking is the opaque
 `userId` LINE puts on each event, which is enough to recognise someone already
@@ -143,6 +170,11 @@ Letting the bot link an account from a chat message instead — "I'm
 somebody@assetfive.co.th" — would let anyone file expenses as anyone else,
 since a chat message is a claim rather than proof.
 
+**The signature is drawn once**, not per document: there is no canvas in a chat
+window, so `User.signature` is what submitting and approving sign with. It is
+copied onto the document at that moment rather than referenced, so redrawing it
+later does not rewrite claims already signed with the old mark.
+
 ## Deploying to Vercel
 
 Import the repository in the Vercel dashboard (Add New → Project → this repo).
@@ -151,7 +183,9 @@ Next.js needs no configuration file there: Vercel detects the framework, runs
 
 Set these under Settings → Environment Variables:
 `DATABASE_URL`, `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`,
-`GOOGLE_GENAI_API_KEY`, `ALLOWED_EMAIL_DOMAINS`, and `AUTH_TRUST_HOST=true`.
+`GOOGLE_GENAI_API_KEY`, `ALLOWED_EMAIL_DOMAINS`, `AUTH_TRUST_HOST=true`, and —
+for the OA — `LINE_CHANNEL_SECRET`, `LINE_CHANNEL_ACCESS_TOKEN`, `LINE_LIFF_ID`
+and `APP_URL` set to the stable production URL.
 Skipping `ALLOWED_EMAIL_DOMAINS` opens sign-in to any Google account, not just
 the company domain — `src/lib/env.ts` treats an empty value as "allow all".
 

@@ -83,6 +83,31 @@ export function push(to: string, messages: LineMessage[]): Promise<void> {
   return call("/message/push", { to, messages });
 }
 
+/**
+ * Replies if the token is still good, and pushes if it is not.
+ *
+ * Reading a receipt takes a few seconds — long enough, on a slow model call or
+ * a cold function, to outlive the reply token. Losing the answer entirely at
+ * that point would be the worst outcome for the one flow the bot exists for, so
+ * the message goes out as a push instead. Pushes are metered where replies are
+ * free, which is why this is the fallback and not the default.
+ */
+export async function replyOrPush(
+  replyToken: string,
+  userId: string,
+  messages: LineMessage[],
+): Promise<void> {
+  try {
+    await reply(replyToken, messages);
+  } catch (error) {
+    if (!(error instanceof LineApiError) || error.status < 400 || error.status >= 500) {
+      throw error;
+    }
+    console.warn("LINE reply rejected, pushing instead:", error.message);
+    await push(userId, messages);
+  }
+}
+
 /** Downloads what the user actually sent: the photo behind an image message. */
 export async function getMessageContent(messageId: string): Promise<{
   bytes: Uint8Array;

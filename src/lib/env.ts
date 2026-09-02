@@ -92,6 +92,27 @@ export function appUrl(): string {
 }
 
 /**
+ * A link to one of the app's own pages, opened from inside LINE.
+ *
+ * With `LINE_LIFF_ID` set, the page opens through LIFF — inside the LINE app,
+ * with the LINE SDK available, so a signature drawn there can be attributed to
+ * the person who drew it. Without it the same path still opens, in the ordinary
+ * in-app browser, which is enough to look at something but not to prove who is
+ * looking. The variable is therefore optional rather than required: the bot
+ * works without it, it just cannot ask for anything that needs identity.
+ */
+export function liffUrl(path: string): string {
+  const withSlash = path.startsWith("/") ? path : `/${path}`;
+  const liffId = process.env.LINE_LIFF_ID?.trim();
+
+  if (!liffId) return `${appUrl()}${withSlash}`;
+
+  // LIFF opens its configured endpoint and appends `liff.state`, which it hands
+  // back to the page as the path to show.
+  return `https://liff.line.me/${liffId}?liff.state=${encodeURIComponent(withSlash)}`;
+}
+
+/**
  * E-mail domains permitted to sign in. An empty list means "any Google account".
  */
 export function allowedEmailDomains(): string[] {

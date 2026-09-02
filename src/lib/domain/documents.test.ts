@@ -11,10 +11,12 @@ import {
 import { prisma } from "@/lib/db";
 import { formatDocNumber } from "@/lib/domain/doc-number";
 import {
+  appendItem,
   createDraft,
   decideDocument,
   getDocumentFor,
   listPendingForApprover,
+  removeItem,
   saveDocument,
   submitDocument,
   toBytes,
@@ -361,6 +363,161 @@ describe("visibility", () => {
     assert.deepEqual(
       queue.map((doc) => doc.id),
       [mine],
+    );
+  });
+});
+
+describe("appendItem", () => {
+  it("adds a line without disturbing the ones already there", async () => {
+    const id = await draftFor();
+    const before = await getDocumentFor(id, requester.id);
+
+    await appendItem(id, requester.id, {
+      type: ExpenseItemType.TOLL,
+      incurredOn: "2026-07-29",
+      amount: 40,
+    });
+
+    const after = await getDocumentFor(id, requester.id);
+
+    // The chat flow hands out item ids in Flex cards that stay in the
+    // conversation; rewriting the list would leave every earlier card pointing
+    // at a row that no longer exists.
+    assert.deepEqual(
+      after.items.slice(0, 2).map((item) => item.id),
+      before.items.map((item) => item.id),
+    );
+    assert.equal(after.items.length, 3);
+    assert.equal(Number(after.totalAmount), 199);
+  });
+
+  it("numbers each new line after the last", async () => {
+    const id = await createDraft(requester.id);
+
+    for (const amount of [10, 20, 30]) {
+      await appendItem(id, requester.id, {
+        type: ExpenseItemType.TOLL,
+        incurredOn: "2026-07-29",
+        amount,
+      });
+    }
+
+    const doc = await getDocumentFor(id, requester.id);
+    assert.deepEqual(
+      doc.items.map((item) => item.sortOrder),
+      [0, 1, 2],
+    );
+  });
+
+  it("derives a mileage amount rather than trusting the one given", async () => {
+    const id = await createDraft(requester.id);
+
+    await appendItem(id, requester.id, {
+      type: ExpenseItemType.PERSONAL_VEHICLE,
+      incurredOn: "2026-07-29",
+      distanceKm: 12,
+      ratePerKm: 6,
+      amount: 99_999,
+    });
+
+    const doc = await getDocumentFor(id, requester.id);
+    assert.equal(Number(doc.items[0].amount), 72);
+    assert.equal(Number(doc.totalAmount), 72);
+  });
+
+  it("accepts a line OCR could not complete, so it can be corrected later", async () => {
+    const id = await createDraft(requester.id);
+
+    await appendItem(id, requester.id, {
+      type: ExpenseItemType.PUBLIC_TRANSPORT,
+      incurredOn: "2026-07-29",
+      amount: 0,
+    });
+
+    const doc = await getDocumentFor(id, requester.id);
+    assert.equal(doc.items.length, 1);
+
+    // Incomplete is allowed to exist but not to be submitted.
+    await assert.rejects(
+      () => submitDocument(id, requester.id, SIGNATURE),
+      ValidationError,
+    );
+  });
+
+  it("refuses a document belonging to someone else", async () => {
+    const id = await draftFor();
+
+    await assert.rejects(
+      () =>
+        appendItem(id, outsider.id, {
+          type: ExpenseItemType.TOLL,
+          incurredOn: "2026-07-29",
+          amount: 40,
+        }),
+      ForbiddenError,
+    );
+  });
+
+  it("refuses a document that is already awaiting a decision", async () => {
+    const id = await draftFor();
+    await submitDocument(id, requester.id, SIGNATURE);
+
+    await assert.rejects(
+      () =>
+        appendItem(id, requester.id, {
+          type: ExpenseItemType.TOLL,
+          incurredOn: "2026-07-29",
+          amount: 40,
+        }),
+      InvalidStateError,
+    );
+  });
+});
+
+describe("removeItem", () => {
+  it("drops the line and re-totals what is left", async () => {
+    const id = await draftFor();
+    const doc = await getDocumentFor(id, requester.id);
+
+    await removeItem(doc.items[1].id, requester.id);
+
+    const after = await getDocumentFor(id, requester.id);
+    assert.equal(after.items.length, 1);
+    assert.equal(Number(after.totalAmount), 84);
+  });
+
+  it("leaves a total of zero when the last line goes", async () => {
+    const id = await createDraft(requester.id);
+    const item = await appendItem(id, requester.id, {
+      type: ExpenseItemType.TOLL,
+      incurredOn: "2026-07-29",
+      amount: 40,
+    });
+
+    await removeItem(item.id, requester.id);
+
+    const after = await getDocumentFor(id, requester.id);
+    assert.equal(Number(after.totalAmount), 0);
+  });
+
+  it("refuses a line on someone else's document", async () => {
+    const id = await draftFor();
+    const doc = await getDocumentFor(id, requester.id);
+
+    await assert.rejects(
+      () => removeItem(doc.items[0].id, outsider.id),
+      ForbiddenError,
+    );
+  });
+
+  it("refuses a line on a submitted document", async () => {
+    const id = await draftFor();
+    const doc = await getDocumentFor(id, requester.id);
+    await submitDocument(id, requester.id, SIGNATURE);
+
+    await assert.rejects(
+      () => removeItem(doc.items[0].id, requester.id),
+      InvalidStateError,
     );
   });
 });
