@@ -136,6 +136,12 @@ belongs to.
 matches the one on a webhook event only when they do; split across two
 providers, the same person arrives as two unrelated ids and nothing lines up.
 
+Set the LIFF app's **Endpoint URL to the site root** — `https://<app>`, not
+`https://<app>/liff`. LINE appends the path from a `liff.line.me` link to that
+endpoint, so an endpoint ending in `/liff` opens `/liff/liff/signature`. The
+app's **Scopes** must include `openid`, or `liff.getIDToken()` returns null and
+the pages have no way to say who is looking.
+
 ### The conversation
 
 Send a photo — a receipt, a ticket, a toll slip, a screenshot of a map route —
