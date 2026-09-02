@@ -178,6 +178,12 @@ on, and an admin runs
 pnpm line:link someone@assetfive.co.th U1234567890abcdef...
 ```
 
+The same thing without a terminal: **Actions → Link a LINE account → Run
+workflow**, which takes the e-mail and the id as inputs and runs that script
+against Neon. Who may run it is GitHub's answer — write access to the
+repository — which is the same bar as changing the code that decides anything
+else here.
+
 Letting the bot link an account from a chat message instead — "I'm
 somebody@assetfive.co.th" — would let anyone file expenses as anyone else,
 since a chat message is a claim rather than proof.
