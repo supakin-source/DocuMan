@@ -24,7 +24,7 @@ import {
   type DraftLine,
   type DraftState,
 } from "@/lib/line/claim";
-import { push, replyOrPush, type LineMessage } from "@/lib/line/client";
+import { LineApiError, push, replyOrPush, type LineMessage } from "@/lib/line/client";
 import {
   approvalRequestCard,
   approvedDocumentCard,
@@ -346,34 +346,67 @@ async function submitMessages(user: LineUser, documentId: string): Promise<LineM
   }
 
   const state = await readDraft(documentId);
-
-  if (result.approverLineUserId) {
-    try {
-      await push(result.approverLineUserId, [
-        approvalRequestCard({
-          documentId,
-          docNo: result.docNo,
-          requesterName: result.requesterName ?? "ผู้จัดทำ",
-          itemCount: state?.lines.length ?? 0,
-          total: result.total,
-        }),
-      ]);
-    } catch (error) {
-      console.error("Could not notify the approver for", documentId, error);
-    }
-  }
+  const approverName = result.approverName ?? "ผู้อนุมัติ";
 
   return [
     text(
       [
         `ส่งอนุมัติแล้ว เลขที่ ${result.docNo ?? "—"}`,
         `ยอดรวม ฿${formatMoney(result.total)}`,
-        result.approverLineUserId
-          ? `แจ้ง ${result.approverName ?? "ผู้อนุมัติ"} ทางไลน์แล้ว`
-          : `รอ ${result.approverName ?? "ผู้อนุมัติ"} พิจารณา (ยังไม่ได้เชื่อมบัญชีไลน์)`,
+        await notifyApprover(result, documentId, state?.lines.length ?? 0, approverName),
       ].join("\n"),
     ),
   ];
+}
+
+/**
+ * Pushes the approval request, and says what actually became of it.
+ *
+ * The claim is submitted either way — it is in the approver's queue whether or
+ * not a message reached their phone — so a failure here is reported rather
+ * than thrown. But it has to be reported: this used to announce "แจ้ง
+ * ผู้อนุมัติทางไลน์แล้ว" on the strength of the approver merely having a LINE
+ * id on file, which said the message had been delivered when LINE had in fact
+ * refused it, leaving a requester waiting on a notification nobody ever got.
+ */
+async function notifyApprover(
+  result: Awaited<ReturnType<typeof submitClaim>>,
+  documentId: string,
+  itemCount: number,
+  approverName: string,
+): Promise<string> {
+  if (!result.approverLineUserId) {
+    return `รอ ${approverName} พิจารณา (ยังไม่ได้เชื่อมบัญชีไลน์)`;
+  }
+
+  try {
+    await push(result.approverLineUserId, [
+      approvalRequestCard({
+        documentId,
+        docNo: result.docNo,
+        requesterName: result.requesterName ?? "ผู้จัดทำ",
+        itemCount,
+        total: result.total,
+      }),
+    ]);
+
+    return `แจ้ง ${approverName} ทางไลน์แล้ว`;
+  } catch (error) {
+    console.error("Could not notify the approver for", documentId, error);
+
+    // The two rejections this flow actually hits on a first run, both of them
+    // things a person can fix: 400 is the id itself — not a user this channel
+    // has ever seen, which is what a hand-copied id or one taken from another
+    // channel looks like — and 403 is the OA not being permitted to reach them.
+    if (error instanceof LineApiError && error.status === 400) {
+      return `⚠️ ส่งแจ้งเตือนหา ${approverName} ไม่ได้ — LINE ID ที่ผูกไว้ใช้ไม่ได้กับแชนแนลนี้ กรุณาให้ผู้ดูแลระบบผูกใหม่ (เอกสารส่งเข้าคิวอนุมัติเรียบร้อยแล้ว)`;
+    }
+    if (error instanceof LineApiError && error.status === 403) {
+      return `⚠️ ส่งแจ้งเตือนหา ${approverName} ไม่ได้ — กรุณาให้เขาเพิ่ม LINE OA นี้เป็นเพื่อนก่อน (เอกสารส่งเข้าคิวอนุมัติเรียบร้อยแล้ว)`;
+    }
+
+    return `⚠️ ส่งแจ้งเตือนหา ${approverName} ไม่สำเร็จ กรุณาแจ้งเขาโดยตรง (เอกสารส่งเข้าคิวอนุมัติเรียบร้อยแล้ว)`;
+  }
 }
 
 const VERDICT_WORD = {
@@ -440,13 +473,17 @@ async function decide(
     }
   }
 
-  if (verdict === "approve") {
-    await notifyAdmins(document, user.name ?? "ผู้อนุมัติ");
-  }
+  const delivery =
+    verdict === "approve"
+      ? await notifyAdmins(document, user.name ?? "ผู้อนุมัติ")
+      : null;
 
   return [
     text(
-      `บันทึกแล้ว: ${VERDICT_WORD[verdict]} เอกสาร ${document.docNo ?? ""} ฿${formatMoney(Number(document.totalAmount))}`.trim(),
+      [
+        `บันทึกแล้ว: ${VERDICT_WORD[verdict]} เอกสาร ${document.docNo ?? ""} ฿${formatMoney(Number(document.totalAmount))}`.trim(),
+        ...(delivery ? [delivery] : []),
+      ].join("\n"),
     ),
   ];
 }
@@ -460,19 +497,21 @@ async function decide(
  * seconds and the approver is waiting on this reply — so the file is built by
  * whichever admin opens the link, and cached from then on.
  *
- * Failures are logged and swallowed, as with the other pushes here: the claim
- * is approved either way, and an admin who never got the message can still be
- * sent the link again.
+ * A failure here does not undo the approval — the document is approved whether
+ * or not the link reached anyone — so it is reported rather than thrown. But it
+ * is reported: the approver is the only person still holding the conversation
+ * at this point, and telling them nothing means a claim that looks filed to
+ * everyone and arrived nowhere.
  */
 async function notifyAdmins(
   document: Awaited<ReturnType<typeof decideDocument>>,
   approverName: string,
-): Promise<void> {
+): Promise<string> {
   const admins = await listAdminLineIds();
 
   if (admins.length === 0) {
     console.warn("No admin has linked LINE; nobody was sent", document.docNo);
-    return;
+    return "⚠️ ยังไม่มีแอดมินที่ผูกไลน์ไว้ ไฟล์ PDF จึงยังไม่ได้ส่งให้ใคร";
   }
 
   const { url, expiresAt } = pdfLink(document.id);
@@ -487,13 +526,23 @@ async function notifyAdmins(
 
   // One at a time rather than a multicast: an admin who has blocked the OA
   // must not stop the message reaching the others.
+  let delivered = 0;
   for (const lineUserId of admins) {
     try {
       await push(lineUserId, [card]);
+      delivered += 1;
     } catch (error) {
       console.error("Could not send the approved document to an admin", error);
     }
   }
+
+  if (delivered === 0) {
+    return `⚠️ ส่งไฟล์ PDF ให้แอดมินไม่สำเร็จ (${admins.length} คน) กรุณาแจ้งผู้ดูแลระบบ`;
+  }
+  if (delivered < admins.length) {
+    return `ส่งไฟล์ PDF ให้แอดมินแล้ว ${delivered} จาก ${admins.length} คน`;
+  }
+  return "ส่งไฟล์ PDF ให้แอดมินทางไลน์แล้ว";
 }
 
 // ─── The approver's month ─────────────────────────────────────────────────
