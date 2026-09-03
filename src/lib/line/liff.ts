@@ -50,9 +50,13 @@ let cached: LiffEnv | undefined;
  * unrecognised error becomes — sends them round a loop that cannot end.
  */
 export class LiffNotConfiguredError extends Error {
-  constructor(detail: string) {
-    super(detail);
+  /** Which variables are absent — named, so nobody has to guess which. */
+  readonly missing: string[];
+
+  constructor(missing: string[]) {
+    super(`Invalid LIFF environment: ${missing.join(", ")} not set`);
     this.name = "LiffNotConfiguredError";
+    this.missing = missing;
   }
 }
 
@@ -61,8 +65,8 @@ export function liffEnv(): LiffEnv {
 
   const parsed = liffEnvSchema.safeParse(process.env);
   if (!parsed.success) {
-    const missing = parsed.error.issues.map((issue) => issue.message).join("\n  - ");
-    throw new LiffNotConfiguredError(`Invalid LIFF environment:\n  - ${missing}`);
+    const missing = parsed.error.issues.map((issue) => String(issue.path[0]));
+    throw new LiffNotConfiguredError(missing);
   }
 
   cached = parsed.data;

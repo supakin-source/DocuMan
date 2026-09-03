@@ -41,8 +41,13 @@ export function toErrorResponse(error: unknown): NextResponse<ApiError> {
   // response says whose problem it is.
   if (error instanceof LiffNotConfiguredError) {
     console.error("LIFF is not configured on this deployment", error);
+    // The variable names, not their values: naming them is what turns this
+    // from "tell an admin" into something an admin can act on without
+    // reading the server log first.
     return NextResponse.json(
-      { error: "ระบบยังตั้งค่า LIFF ไม่ครบ กรุณาแจ้งผู้ดูแลระบบ" },
+      {
+        error: `ระบบยังตั้งค่าไม่ครบ — ยังไม่ได้ตั้ง ${error.missing.join(", ")} กรุณาแจ้งผู้ดูแลระบบ`,
+      },
       { status: 503 },
     );
   }
