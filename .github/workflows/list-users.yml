@@ -1,0 +1,34 @@
+name: List users
+
+# Manual only. Read-only — this changes nothing, it only shows who is who:
+# roles, whether LINE is linked, and who each person's approver is set to.
+# Exists for the same reason "Link a LINE account" does: this is set up from a
+# browser with no terminal, and there was otherwise no way to see this.
+#
+# Who may run it is GitHub's answer, not this file's — write access to the
+# repository, the same bar as changing the code that decides anything else
+# here.
+on:
+  workflow_dispatch:
+
+jobs:
+  list:
+    name: List
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: List users
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+        run: pnpm users:list
