@@ -1,0 +1,38 @@
+name: Grant admin
+
+# Manual only. Grants ADMIN to an account that already exists (signed in with
+# Google at least once) — the first admin has to come from somewhere, and the
+# people who administer this have a browser and no terminal.
+#
+# Who may run it is GitHub's answer, not this file's — write access to the
+# repository, the same bar as changing the code that decides anything else
+# here.
+on:
+  workflow_dispatch:
+    inputs:
+      email:
+        description: "Company e-mail of the account to grant ADMIN"
+        required: true
+        type: string
+
+jobs:
+  grant:
+    name: Grant
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Grant admin
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+        run: pnpm admin:grant "${{ inputs.email }}"
