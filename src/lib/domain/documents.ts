@@ -17,6 +17,7 @@ import {
 import {
   computeItemAmount,
   expenseItemInputSchema,
+  type ExpenseItemFields,
   type ExpenseItemInput,
 } from "@/lib/domain/items";
 
@@ -258,6 +259,164 @@ export async function saveDocument(
         data: { itemId: created.id },
       });
     }
+  });
+}
+
+/**
+ * Appends one line to a draft.
+ *
+ * The web screens collect a whole claim and hand it over at once, which is what
+ * `saveDocument` is shaped for. A chat does the opposite: a receipt arrives,
+ * becomes a line, and the next one arrives minutes later. Rewriting the list on
+ * each photo would discard and re-create every earlier line — and with them the
+ * item ids the already-sent Flex cards refer to.
+ */
+export async function appendItem(
+  documentId: string,
+  userId: string,
+  input: ExpenseItemInput,
+): Promise<{ id: string; sortOrder: number }> {
+  const existing = await prisma.expenseDocument.findUnique({
+    where: { id: documentId },
+    select: { ownerId: true, status: true, _count: { select: { items: true } } },
+  });
+
+  if (!existing) throw new NotFoundError();
+  if (existing.ownerId !== userId) throw new ForbiddenError();
+  if (!EDITABLE_STATUSES.includes(existing.status)) {
+    throw new InvalidStateError("เอกสารนี้ส่งอนุมัติแล้ว ไม่สามารถแก้ไขได้");
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const created = await tx.expenseItem.create({
+      data: {
+        documentId,
+        ...toItemCreate(input, existing._count.items),
+      },
+      select: { id: true, sortOrder: true },
+    });
+
+    if (input.attachmentId) {
+      // Scoped to this document so quoting someone else's attachment id does
+      // not pull their receipt onto this claim.
+      await tx.attachment.updateMany({
+        where: { documentId, id: input.attachmentId },
+        data: { itemId: created.id },
+      });
+    }
+
+    await recalculateTotal(tx, documentId);
+    return created;
+  });
+}
+
+/**
+ * Rewrites one line, wholesale.
+ *
+ * The correction screen shows the whole line and hands the whole line back, so
+ * there is nothing to diff. `sortOrder` and the attachment are untouched: the
+ * user is fixing what OCR read off a receipt, not moving the line or swapping
+ * the receipt behind it.
+ */
+export async function updateItem(
+  itemId: string,
+  userId: string,
+  input: ExpenseItemFields,
+): Promise<string> {
+  const item = await prisma.expenseItem.findUnique({
+    where: { id: itemId },
+    select: {
+      documentId: true,
+      sortOrder: true,
+      document: { select: { ownerId: true, status: true } },
+    },
+  });
+
+  if (!item) throw new NotFoundError();
+  if (item.document.ownerId !== userId) throw new ForbiddenError();
+  if (!EDITABLE_STATUSES.includes(item.document.status)) {
+    throw new InvalidStateError("เอกสารนี้ส่งอนุมัติแล้ว ไม่สามารถแก้ไขได้");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.expenseItem.update({
+      where: { id: itemId },
+      data: toItemCreate(input, item.sortOrder),
+    });
+    await recalculateTotal(tx, item.documentId);
+  });
+
+  return item.documentId;
+}
+
+/** One line and the receipt behind it, for the correction screen. */
+export async function getItemFor(itemId: string, userId: string) {
+  const item = await prisma.expenseItem.findUnique({
+    where: { id: itemId },
+    select: {
+      id: true,
+      type: true,
+      incurredOn: true,
+      origin: true,
+      destination: true,
+      purpose: true,
+      distanceKm: true,
+      ratePerKm: true,
+      amount: true,
+      attachment: { select: { id: true, mimeType: true } },
+      document: { select: { id: true, ownerId: true, status: true } },
+    },
+  });
+
+  if (!item) throw new NotFoundError();
+  if (item.document.ownerId !== userId) throw new ForbiddenError();
+
+  return item;
+}
+
+/** Removes one line from a draft. Silent when the line is already gone. */
+export async function removeItem(itemId: string, userId: string): Promise<string> {
+  const item = await prisma.expenseItem.findUnique({
+    where: { id: itemId },
+    select: {
+      documentId: true,
+      document: { select: { ownerId: true, status: true } },
+    },
+  });
+
+  if (!item) throw new NotFoundError();
+  if (item.document.ownerId !== userId) throw new ForbiddenError();
+  if (!EDITABLE_STATUSES.includes(item.document.status)) {
+    throw new InvalidStateError("เอกสารนี้ส่งอนุมัติแล้ว ไม่สามารถแก้ไขได้");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.expenseItem.delete({ where: { id: itemId } });
+    await recalculateTotal(tx, item.documentId);
+  });
+
+  return item.documentId;
+}
+
+/**
+ * Rewrites `totalAmount` from the lines that are actually there.
+ *
+ * Summed in the database rather than in the caller so the figure cannot drift
+ * from the rows it claims to describe — every path that changes a line goes
+ * through here inside the same transaction.
+ */
+async function recalculateTotal(
+  tx: Prisma.TransactionClient,
+  documentId: string,
+): Promise<void> {
+  const sum = await tx.expenseItem.aggregate({
+    where: { documentId },
+    _sum: { amount: true },
+  });
+
+  await tx.expenseDocument.update({
+    where: { id: documentId },
+    data: { totalAmount: sum._sum.amount ?? 0 },
   });
 }
 

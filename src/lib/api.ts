@@ -9,6 +9,7 @@ import {
   ValidationError,
 } from "@/lib/domain/errors";
 import { GoogleReauthRequiredError } from "@/lib/google/token";
+import { LiffUnauthenticatedError } from "@/lib/line/liff";
 import { OcrFailedError, UnsupportedDocumentError } from "@/lib/ocr/gemini";
 
 export type ApiError = {
@@ -29,6 +30,9 @@ export type ApiError = {
 export function toErrorResponse(error: unknown): NextResponse<ApiError> {
   if (error instanceof UnauthenticatedError) {
     return NextResponse.json({ error: "กรุณาเข้าสู่ระบบ" }, { status: 401 });
+  }
+  if (error instanceof LiffUnauthenticatedError) {
+    return NextResponse.json({ error: error.message }, { status: 401 });
   }
   if (error instanceof ForbiddenError) {
     return NextResponse.json({ error: error.message }, { status: 403 });

@@ -41,6 +41,79 @@ export function serverEnv(): ServerEnv {
 }
 
 /**
+ * The LINE channel's own configuration, parsed separately from `serverEnv`.
+ *
+ * Kept apart on purpose: the webhook has no business demanding a Google OAuth
+ * client be configured before it will answer, and the Google half has no
+ * business demanding a LINE channel. Each half fails on what it actually needs.
+ */
+const lineEnvSchema = z.object({
+  /** Signs every webhook delivery; without it nothing can be trusted. */
+  LINE_CHANNEL_SECRET: z.string().min(1, "LINE_CHANNEL_SECRET is required"),
+  /** Bearer token for replying and pushing. */
+  LINE_CHANNEL_ACCESS_TOKEN: z
+    .string()
+    .min(1, "LINE_CHANNEL_ACCESS_TOKEN is required"),
+});
+
+export type LineEnv = z.infer<typeof lineEnvSchema>;
+
+let cachedLine: LineEnv | undefined;
+
+export function lineEnv(): LineEnv {
+  if (cachedLine) return cachedLine;
+
+  const parsed = lineEnvSchema.safeParse(process.env);
+  if (!parsed.success) {
+    const missing = parsed.error.issues.map((issue) => issue.message).join("\n  - ");
+    throw new Error(`Invalid LINE environment:\n  - ${missing}`);
+  }
+
+  cachedLine = parsed.data;
+  return cachedLine;
+}
+
+/**
+ * Absolute origin for links handed to LINE — LIFF pages and document links have
+ * to be reachable from a phone, so a relative path is no use.
+ *
+ * `APP_URL` wins because Vercel's own `VERCEL_URL` is the per-deployment host,
+ * which changes on every push and would leave already-sent messages pointing at
+ * a stale deployment.
+ */
+export function appUrl(): string {
+  const explicit = process.env.APP_URL?.trim();
+  if (explicit) return explicit.replace(/\/$/, "");
+
+  const vercel = process.env.VERCEL_URL?.trim();
+  if (vercel) return `https://${vercel}`;
+
+  return "http://localhost:3000";
+}
+
+/**
+ * A link to one of the app's own pages, opened from inside LINE.
+ *
+ * With `LINE_LIFF_ID` set, the page opens through LIFF — inside the LINE app,
+ * with the LINE SDK available, so a signature drawn there can be attributed to
+ * the person who drew it. Without it the same path still opens, in the ordinary
+ * in-app browser, which is enough to look at something but not to prove who is
+ * looking. The variable is therefore optional rather than required: the bot
+ * works without it, it just cannot ask for anything that needs identity.
+ */
+export function liffUrl(path: string): string {
+  const withSlash = path.startsWith("/") ? path : `/${path}`;
+  const liffId = process.env.LINE_LIFF_ID?.trim();
+
+  if (!liffId) return `${appUrl()}${withSlash}`;
+
+  // A path after the LIFF id is appended to the app's configured endpoint URL,
+  // so that endpoint must be the site root — `https://<app>`, not
+  // `https://<app>/liff`, which would open `/liff/liff/signature`.
+  return `https://liff.line.me/${liffId}${withSlash}`;
+}
+
+/**
  * E-mail domains permitted to sign in. An empty list means "any Google account".
  */
 export function allowedEmailDomains(): string[] {

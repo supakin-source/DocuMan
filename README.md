@@ -74,19 +74,24 @@ Google Cloud project; sign-in and Drive access share a single consent screen.
 | `pnpm db:deploy`   | Apply migrations (deployment)              |
 | `pnpm db:studio`   | Prisma Studio                              |
 | `pnpm admin:grant` | Grant ADMIN to an existing account          |
+| `pnpm line:link`   | Link an account to a LINE user id           |
 
 ## Layout
 
 ```
 prisma/schema.prisma      Database schema
 src/app/(app)/            Signed-in screens, inside the phone frame
+src/app/liff/             The pages the bot links to, opened inside LINE
+src/app/print/[id]/       The bare sheets, for the PDF renderer
 src/app/api/              Route handlers
 src/auth.config.ts        Edge-safe Auth.js config — shared with src/proxy.ts
 src/auth.ts               Full Auth.js config with the Prisma adapter
 src/proxy.ts              Route protection (Next 16 `proxy`, formerly middleware)
 src/components/           Shared UI, including the printable document sheets
+src/lib/documents/        PDF rendering and the signed link it is served on
 src/lib/domain/           Document lifecycle, user administration, the rules
 src/lib/google/           Per-user OAuth client and Drive access
+src/lib/line/             The OA: transport, identity, cards, conversation
 src/lib/ocr/              Text and structured extraction via Gemini
 src/lib/thai.ts           Buddhist Era dates and baht-in-words
 scripts/grant-admin.ts    Bootstraps the first admin
@@ -115,6 +120,139 @@ design/                   The Claude Design export this is implemented against
 | `/admin`                 | User administration (ADMIN only)               |
 | `/admin/[id]`            | HR fields, approver and roles for one account  |
 
+## The LINE OA
+
+The workflow is moving into a LINE Official Account: receipts are sent to the
+bot, and the claim is built, corrected and decided there rather than in the web
+screens.
+
+Set up in the [LINE Developers console](https://developers.line.biz/console/):
+a Messaging API channel, with **Auto-reply** and **Greeting messages** turned
+off (they answer over the bot's own replies), and the webhook pointed at
+`https://<app>/api/line/webhook`. `LINE_CHANNEL_SECRET` and
+`LINE_CHANNEL_ACCESS_TOKEN` come from that channel.
+
+**Create the LIFF app on that same channel's LIFF tab.** No separate LINE Login
+channel is needed, and the arrangement is worth keeping: an ID token's `aud` is
+the channel the LIFF app belongs to, so with one channel `LINE_LIFF_CHANNEL_ID`
+is simply that channel's own Channel ID from Basic settings, and the user id in
+an ID token is the same one the webhook receives. Split the two across separate
+providers and the same person arrives as two unrelated ids, with nothing to
+join them on.
+
+Set the LIFF app's **Endpoint URL to the site root** — `https://<app>`, not
+`https://<app>/liff`. LINE appends the path from a `liff.line.me` link to that
+endpoint, so an endpoint ending in `/liff` opens `/liff/liff/signature`. The
+app's **Scopes** must include `openid`, or `liff.getIDToken()` returns null and
+the pages have no way to say who is looking.
+
+### The conversation
+
+Send a photo — a receipt, a ticket, a toll slip, a screenshot of a map route —
+and it becomes a line on the current claim, read by Gemini and answered with a
+card showing what was found and what was not. Everything else is a command,
+matched on a phrase rather than an exact string, since people type sentences:
+
+| Say | What happens |
+| --- | ------------ |
+| “รายการ”     | The claim as it stands, with its total |
+| “ส่งอนุมัติ”   | Signs it with the stored signature and sends it |
+| “เริ่มใหม่”    | Starts a fresh claim |
+| “ลายเซ็น”     | Opens the page to draw or redraw the signature |
+| “สรุป”        | The month's approved total (approvers only) |
+
+**There is no "current claim" table.** It is derived: the most recently touched
+document that is still editable. That is the draft being built — or the document
+an approver has just sent back, which is precisely what the next photo is for.
+
+**A line may be incomplete.** OCR misreads a crumpled receipt often enough that
+refusing the upload would be worse than accepting a line with a hole in it, so
+the card names what is missing and `submitDocument` refuses the claim until it
+is filled in. Nothing incomplete can reach an approver.
+
+### Identity and signatures
+
+**Identity has no sign-in.** The only evidence of who is talking is the opaque
+`userId` LINE puts on each event, which is enough to recognise someone already
+linked but says nothing about a stranger. Linking is therefore an admin step:
+someone the bot does not know is shown their own LINE id and asked to pass it
+on, and an admin runs
+
+```bash
+pnpm line:link someone@assetfive.co.th U1234567890abcdef...
+```
+
+The same thing without a terminal: **Actions → Link a LINE account → Run
+workflow**, which takes the e-mail and the id as inputs and runs that script
+against Neon. Who may run it is GitHub's answer — write access to the
+repository — which is the same bar as changing the code that decides anything
+else here.
+
+Letting the bot link an account from a chat message instead — "I'm
+somebody@assetfive.co.th" — would let anyone file expenses as anyone else,
+since a chat message is a claim rather than proof.
+
+**The signature is drawn once**, not per document: there is no canvas in a chat
+window, so `User.signature` is what submitting and approving sign with. It is
+copied onto the document at that moment rather than referenced, so redrawing it
+later does not rewrite claims already signed with the old mark.
+
+### The pages inside LINE
+
+Three things do not fit in a chat bubble, and each is a LIFF page the bot links
+to: drawing a signature, correcting a line OCR misread, and reading a whole
+claim before deciding on it.
+
+| Page | For |
+| ---- | --- |
+| `/liff/signature`      | Draw or redraw the stored signature |
+| `/liff/items/[id]`     | Fix one line, against the receipt beside it |
+| `/liff/documents/[id]` | The claim in full, for the approver |
+
+**A web page carries no envelope.** The webhook can trust a `userId` because
+LINE signs the delivery; anything a browser sends is written by the browser, and
+a page that believed a `?user=` parameter would let anyone sign as anyone else.
+So these pages authenticate with a LIFF **ID token** — a JWT LINE issues naming
+the person viewing — handed to LINE's own `/oauth2/v2.1/verify` to check rather
+than verified here, since LINE holds the key and decides the audience and
+expiry. The identity that comes back is still only a LINE id, and still has to
+resolve to an account an admin linked: the token proves who is holding the
+phone, not that they work here.
+
+The decision itself stays in the chat. Sending an approver to a web page to
+press a button they could press in the notification is a step for its own sake —
+what the page adds is what a Flex bubble cannot hold: every line, and the
+receipts.
+
+### The finished document
+
+Approving is the moment a claim becomes a document of record: both signatures
+are on it and the status is terminal, so it is the first point at which a PDF
+would not go stale. Every admin who has linked LINE is then pushed a card with
+a link to it.
+
+**A link, not a file.** A LINE bot may send text, images, video, audio,
+stickers, locations, imagemaps, templates and flex messages — none of which is
+a PDF. And the link opens in whatever browser LINE hands the admin, on a phone
+that has never signed into this app, so it carries its own permission: an
+expiry, and an HMAC over both it and the document id. A link cannot be edited
+to point at another claim, cannot be extended, and stops working on its own
+after 45 days. It is signed with `AUTH_SECRET`, so rotating that invalidates
+every outstanding link.
+
+**Rendered by a browser, not by a PDF library.** These are Thai documents of
+record: combining marks sit above and below the base letter, and getting them a
+pixel out is the classic failure of every JS PDF library. A headless Chromium
+is driven over `/print/[id]` — the same signed link lets it in — which also
+gets the real Tailwind output, the vendored Thai fonts and the design's own
+`break-inside: avoid` pagination without a second copy of any of them.
+
+The bytes are cached in `DocumentPdf`, and rendering happens on first open
+rather than at approval: Chromium's cold start is seconds, and the approver is
+waiting on a chat reply. Vercel's Hobby tier caps a function at 10 seconds,
+which a cold render can lose — the cost is a retry, and the second open is
+served from Postgres in milliseconds.
+
 ## Deploying to Vercel
 
 Import the repository in the Vercel dashboard (Add New → Project → this repo).
@@ -123,7 +261,11 @@ Next.js needs no configuration file there: Vercel detects the framework, runs
 
 Set these under Settings → Environment Variables:
 `DATABASE_URL`, `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`,
-`GOOGLE_GENAI_API_KEY`, `ALLOWED_EMAIL_DOMAINS`, and `AUTH_TRUST_HOST=true`.
+`GOOGLE_GENAI_API_KEY`, `ALLOWED_EMAIL_DOMAINS`, `AUTH_TRUST_HOST=true`, and —
+for the OA — `LINE_CHANNEL_SECRET`, `LINE_CHANNEL_ACCESS_TOKEN`, `LINE_LIFF_ID`,
+`LINE_LIFF_CHANNEL_ID` and `APP_URL` set to the stable production URL.
+`CHROMIUM_EXECUTABLE_PATH` is for development only — leave it unset there, so
+`@sparticuz/chromium` supplies the browser built for the serverless runtime.
 Skipping `ALLOWED_EMAIL_DOMAINS` opens sign-in to any Google account, not just
 the company domain — `src/lib/env.ts` treats an empty value as "allow all".
 
