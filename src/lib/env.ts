@@ -107,9 +107,11 @@ export function liffUrl(path: string): string {
 
   if (!liffId) return `${appUrl()}${withSlash}`;
 
-  // A path after the LIFF id is appended to the app's configured endpoint URL,
-  // so that endpoint must be the site root — `https://<app>`, not
-  // `https://<app>/liff`, which would open `/liff/liff/signature`.
+  // The path here is not appended to the app's endpoint URL on the request
+  // that actually lands — LIFF opens the endpoint unchanged, with this path
+  // packed into a `liff.state` query parameter, and completes a second real
+  // navigation to it once `liff.init()` resolves. `src/app/liff/page.tsx` is
+  // that endpoint, and finishes the hop itself if the SDK's own does not.
   return `https://liff.line.me/${liffId}${withSlash}`;
 }
 
