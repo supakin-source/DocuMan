@@ -1,15 +1,31 @@
 import "dotenv/config";
 
 import assert from "node:assert/strict";
-import { after, beforeEach, describe, it } from "node:test";
+import { after, afterEach, beforeEach, describe, it } from "node:test";
+
+/**
+ * `serverEnv()`/`lineEnv()` cache on first call, and this file is the first to
+ * reach the code that needs them — `receiveReceipt` calls LINE's content
+ * endpoint, `processPendingReceipts` calls Gemini. `??=` so a real value set
+ * elsewhere (or by an earlier-loaded test file) is never clobbered.
+ */
+process.env.AUTH_SECRET ??= "test-auth-secret";
+process.env.AUTH_GOOGLE_ID ??= "x";
+process.env.AUTH_GOOGLE_SECRET ??= "x";
+process.env.GOOGLE_GENAI_API_KEY ??= "x";
+process.env.LINE_CHANNEL_SECRET ??= "test-channel-secret";
+process.env.LINE_CHANNEL_ACCESS_TOKEN ??= "test-access-token";
 
 import { AppRole, ExpenseItemType, ExpenseStatus } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db";
 import { appendItem, createDraft, decideDocument, submitDocument, toBytes } from "@/lib/domain/documents";
 import { ValidationError } from "@/lib/domain/errors";
 import {
+  countPendingReceipts,
   currentDocumentId,
+  processPendingReceipts,
   readDraft,
+  receiveReceipt,
   startNewDraft,
   submitClaim,
 } from "@/lib/line/claim";
@@ -239,5 +255,161 @@ describe("submitClaim", () => {
     });
 
     await assert.rejects(() => submitClaim(requester.id, id), ValidationError);
+  });
+});
+
+// ─── Reading a burst of photos together ───────────────────────────────────
+
+const realFetch = globalThis.fetch;
+
+/**
+ * Stands in for both external calls a receipt goes through: LINE's content
+ * endpoint (the photo bytes) and Gemini's generateContent (what it read).
+ * Recognised by host, since that is the only thing distinguishing the two.
+ */
+function stubExternalCalls(extractions: Record<string, unknown>[]) {
+  let call = 0;
+
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const url = String(input);
+
+    if (url.includes("api-data.line.me")) {
+      return new Response(new Uint8Array([0xff, 0xd8, 0xff]), {
+        status: 200,
+        headers: { "Content-Type": "image/jpeg" },
+      });
+    }
+
+    if (url.includes("generativelanguage.googleapis.com")) {
+      const extraction = extractions[Math.min(call, extractions.length - 1)];
+      call += 1;
+
+      return new Response(
+        JSON.stringify({
+          candidates: [
+            { content: { parts: [{ text: JSON.stringify(extraction) }] } },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    throw new Error(`Unexpected fetch in test: ${url}`);
+  }) as typeof fetch;
+}
+
+afterEach(() => {
+  globalThis.fetch = realFetch;
+});
+
+const MAP_SCREENSHOT = {
+  kind: "personal_vehicle",
+  date: "2026-07-28",
+  origin: "สำนักงานใหญ่",
+  destination: "ลูกค้า",
+  distanceKm: 12,
+  amount: null,
+};
+
+const TOLL_SLIP = {
+  kind: "toll",
+  date: "2026-07-28",
+  origin: null,
+  destination: null,
+  distanceKm: null,
+  amount: 75,
+};
+
+describe("receiveReceipt", () => {
+  it("stores the photo without reading it", async () => {
+    stubExternalCalls([MAP_SCREENSHOT]);
+
+    const { documentId, pendingCount } = await receiveReceipt({
+      userId: requester.id,
+      messageId: "m1",
+    });
+
+    assert.equal(pendingCount, 1);
+
+    const state = await readDraft(documentId);
+    // Nothing was read, so there is no line yet — only the file behind one.
+    assert.equal(state?.lines.length, 0);
+  });
+
+  it("counts every photo still waiting, across several", async () => {
+    stubExternalCalls([MAP_SCREENSHOT]);
+
+    const first = await receiveReceipt({ userId: requester.id, messageId: "m1" });
+    const second = await receiveReceipt({ userId: requester.id, messageId: "m2" });
+
+    assert.equal(first.pendingCount, 1);
+    assert.equal(second.pendingCount, 2);
+    assert.equal(await countPendingReceipts(first.documentId), 2);
+  });
+});
+
+describe("processPendingReceipts", () => {
+  it("turns every waiting photo into a line, in the order received", async () => {
+    stubExternalCalls([MAP_SCREENSHOT, TOLL_SLIP]);
+
+    const { documentId } = await receiveReceipt({ userId: requester.id, messageId: "m1" });
+    await receiveReceipt({ userId: requester.id, messageId: "m2" });
+
+    const { newLines, state } = await processPendingReceipts(requester.id, documentId);
+
+    assert.equal(newLines.length, 2);
+    assert.equal(newLines[0].type, ExpenseItemType.PERSONAL_VEHICLE);
+    assert.equal(newLines[1].type, ExpenseItemType.TOLL);
+    assert.equal(state.lines.length, 2);
+    // 12 km × the default rate (฿6) = ฿72, plus the ฿75 toll.
+    assert.equal(state.total, 147);
+  });
+
+  it("leaves nothing pending once everything has been read", async () => {
+    stubExternalCalls([MAP_SCREENSHOT]);
+    const { documentId } = await receiveReceipt({ userId: requester.id, messageId: "m1" });
+
+    await processPendingReceipts(requester.id, documentId);
+
+    assert.equal(await countPendingReceipts(documentId), 0);
+  });
+
+  it("does nothing, and reports nothing, when there is no photo waiting", async () => {
+    const documentId = await currentDocumentId(requester.id);
+
+    const { newLines, state } = await processPendingReceipts(requester.id, documentId);
+
+    assert.equal(newLines.length, 0);
+    assert.equal(state.lines.length, 0);
+  });
+
+  it("running it twice does not read the same photo again", async () => {
+    stubExternalCalls([MAP_SCREENSHOT]);
+    const { documentId } = await receiveReceipt({ userId: requester.id, messageId: "m1" });
+
+    const once = await processPendingReceipts(requester.id, documentId);
+    const twice = await processPendingReceipts(requester.id, documentId);
+
+    assert.equal(once.newLines.length, 1);
+    assert.equal(twice.newLines.length, 0);
+    assert.equal(twice.state.lines.length, 1);
+  });
+
+  it("still creates a blank line for a photo OCR could not read", async () => {
+    // A model failure must not lose the photo the user already sent — it
+    // becomes a line with a hole in it, same as an "unknown" document kind.
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.includes("api-data.line.me")) {
+        return new Response(new Uint8Array([0xff, 0xd8, 0xff]), { status: 200 });
+      }
+      return new Response("server error", { status: 500 });
+    }) as typeof fetch;
+
+    const { documentId } = await receiveReceipt({ userId: requester.id, messageId: "m1" });
+    const { newLines } = await processPendingReceipts(requester.id, documentId);
+
+    assert.equal(newLines.length, 1);
+    assert.deepEqual(newLines[0].missing.sort(), ["จำนวนเงิน", "ต้นทาง", "ปลายทาง"].sort());
   });
 });

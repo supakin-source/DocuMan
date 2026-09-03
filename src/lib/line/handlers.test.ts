@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { AppRole } from "@/generated/prisma/enums";
-import { commandFor, helpText } from "@/lib/line/handlers";
+import { chunk, commandFor, helpText } from "@/lib/line/handlers";
 import type { LineUser } from "@/lib/line/identity";
 
 /**
@@ -14,6 +14,11 @@ import type { LineUser } from "@/lib/line/identity";
  */
 
 const PHRASES: [string, ReturnType<typeof commandFor>][] = [
+  ["ครบแล้ว", "confirm"],
+  ["ส่งครบแล้วครับ", "confirm"],
+  ["ส่งรูปครบทุกใบแล้ว", "confirm"],
+  ["หมดแล้วครับ", "confirm"],
+  ["อ่านเลย", "confirm"],
   ["ส่งอนุมัติ", "submit"],
   ["ส่งอนุมัติเลยครับ", "submit"],
   ["ขออนุมัติหน่อย", "submit"],
@@ -72,5 +77,38 @@ describe("helpText", () => {
     };
 
     assert.ok(helpText(approver).includes("สรุป"));
+  });
+
+  it("tells whoever can send photos that they can confirm a batch", () => {
+    // Both roles can receive receipts, so both need to know the word for it.
+    assert.ok(helpText(requester).includes("ครบแล้ว"));
+  });
+});
+
+describe("chunk", () => {
+  it("splits into groups no larger than the given size", () => {
+    assert.deepEqual(chunk([1, 2, 3, 4, 5, 6, 7], 5), [
+      [1, 2, 3, 4, 5],
+      [6, 7],
+    ]);
+  });
+
+  it("returns one chunk when everything already fits", () => {
+    assert.deepEqual(chunk([1, 2, 3], 5), [[1, 2, 3]]);
+  });
+
+  it("returns nothing for nothing", () => {
+    assert.deepEqual(chunk([], 5), []);
+  });
+
+  it("puts each item in its own chunk when the size is one", () => {
+    assert.deepEqual(chunk([1, 2, 3], 1), [[1], [2], [3]]);
+  });
+
+  it("lands exactly on a chunk boundary without an empty trailing one", () => {
+    assert.deepEqual(chunk([1, 2, 3, 4], 2), [
+      [1, 2],
+      [3, 4],
+    ]);
   });
 });

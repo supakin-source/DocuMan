@@ -15,11 +15,14 @@ import {
 import { summariseMonth } from "@/lib/domain/stats";
 import { liffUrl } from "@/lib/env";
 import {
-  addReceipt,
   currentDocumentId,
+  processPendingReceipts,
   readDraft,
+  receiveReceipt,
   startNewDraft,
   submitClaim,
+  type DraftLine,
+  type DraftState,
 } from "@/lib/line/claim";
 import { push, replyOrPush, type LineMessage } from "@/lib/line/client";
 import {
@@ -56,6 +59,7 @@ export function text(value: string): LineMessage {
  * specific phrase has to come first where two overlap.
  */
 const COMMANDS: { match: string[]; command: Command }[] = [
+  { match: ["ครบแล้ว", "ครบทุกใบ", "หมดแล้ว", "อ่านเลย"], command: "confirm" },
   { match: ["เริ่มใหม่", "สร้างใหม่", "ใบใหม่"], command: "new" },
   { match: ["ส่งอนุมัติ", "ส่งเบิก", "ขออนุมัติ"], command: "submit" },
   { match: ["สรุป", "ยอดเดือน", "ยอดรวม"], command: "summary" },
@@ -64,7 +68,7 @@ const COMMANDS: { match: string[]; command: Command }[] = [
   { match: ["ช่วย", "ทำอะไรได้", "วิธีใช้", "help"], command: "help" },
 ];
 
-type Command = "new" | "submit" | "summary" | "draft" | "signature" | "help";
+type Command = "confirm" | "new" | "submit" | "summary" | "draft" | "signature" | "help";
 
 export function commandFor(message: string): Command | null {
   const normalised = message.trim().toLowerCase();
@@ -88,6 +92,13 @@ export async function handleText(
   const command = commandFor(message) ?? "help";
 
   switch (command) {
+    case "confirm": {
+      const documentId = await currentDocumentId(user.id);
+      const { newLines, state } = await processPendingReceipts(user.id, documentId);
+      await sendBatched(replyToken, lineUserId, confirmMessages(newLines, state));
+      return;
+    }
+
     case "new": {
       const documentId = await startNewDraft(user.id);
       const state = await readDraft(documentId);
@@ -109,13 +120,12 @@ export async function handleText(
       return;
 
     case "draft": {
+      // Flushed first: "รายการ" is how someone checks what they have sent so
+      // far, and a photo still sitting unread would be missing from the very
+      // list meant to show everything.
       const documentId = await currentDocumentId(user.id);
-      const state = await readDraft(documentId);
-      await replyOrPush(
-        replyToken,
-        lineUserId,
-        state ? [draftCard(state)] : [text("ยังไม่มีเอกสารที่กำลังทำอยู่")],
-      );
+      const { state } = await processPendingReceipts(user.id, documentId);
+      await replyOrPush(replyToken, lineUserId, [draftCard(state)]);
       return;
     }
 
@@ -132,9 +142,11 @@ export function helpText(user: LineUser): string {
   const lines = [
     "ระบบเบิกค่าเดินทาง DocuMan",
     "",
-    "ส่งรูปใบเสร็จ ตั๋ว สลิปทางด่วน หรือสกรีนช็อตเส้นทางเข้ามาได้เลย ระบบจะอ่านข้อมูลและเพิ่มเป็นรายการให้อัตโนมัติ",
+    "ส่งรูปใบเสร็จ ตั๋ว สลิปทางด่วน หรือสกรีนช็อตเส้นทางเข้ามาได้เลย ส่งได้หลายรูปติดกัน " +
+      "แล้วพิมพ์ “ครบแล้ว” เมื่อส่งครบทุกใบ ระบบจะอ่านข้อมูลทั้งหมดพร้อมกัน",
     "",
     "คำสั่งที่ใช้ได้",
+    "• “ครบแล้ว” — อ่านข้อมูลรูปที่ส่งไปทั้งหมด",
     "• “รายการ” — ดูเอกสารที่กำลังรวบรวม",
     "• “ส่งอนุมัติ” — ส่งเอกสารให้ผู้อนุมัติ",
     "• “เริ่มใหม่” — เริ่มเอกสารใบใหม่",
@@ -162,20 +174,76 @@ function signatureMessage(): LineMessage {
 
 // ─── Images ───────────────────────────────────────────────────────────────
 
+/**
+ * Acknowledges a photo without reading it.
+ *
+ * Receipts tend to arrive as a burst of several photos in a row, and OCR-ing
+ * each one the moment it lands would answer with a running total that reads
+ * as though it is double-counting the ones already sent — it is not, but a
+ * chat is not where a running total should live mid-upload. So this only
+ * stores the photo; every one of them is read together once the user says the
+ * burst is over, in `processPendingReceipts`.
+ */
 export async function handleImage(
   user: LineUser,
   lineUserId: string,
   replyToken: string,
   messageId: string,
 ): Promise<void> {
-  const { itemId, state } = await addReceipt({ userId: user.id, messageId });
-  const line = state.lines.find((candidate) => candidate.id === itemId);
+  const { pendingCount } = await receiveReceipt({ userId: user.id, messageId });
 
-  await replyOrPush(
-    replyToken,
-    lineUserId,
-    line ? [receiptCard(line, state)] : [draftCard(state)],
-  );
+  await replyOrPush(replyToken, lineUserId, [
+    text(
+      `รับรูปแล้ว (รอประมวลผล ${pendingCount} ใบ)\n` +
+        `ส่งต่อได้เลย หรือพิมพ์ "ครบแล้ว" เมื่อส่งครบทุกใบ`,
+    ),
+  ]);
+}
+
+/** What "ครบแล้ว" answers with, once every waiting photo has been read. */
+function confirmMessages(newLines: DraftLine[], state: DraftState): LineMessage[] {
+  if (newLines.length === 0) {
+    return [text("ไม่มีรูปที่รอประมวลผล ส่งรูปเข้ามาได้เลย")];
+  }
+
+  return [
+    text(`อ่านข้อมูลแล้ว ${newLines.length} รายการ`),
+    ...newLines.map((line) => receiptCard(line, state)),
+  ];
+}
+
+/** LINE refuses a reply or push carrying more than five messages. */
+const LINE_MESSAGE_BATCH = 5;
+
+/**
+ * Sends a possibly-long batch of messages, chunked to LINE's limit.
+ *
+ * A reply token is single-use, so only the first chunk can spend it; anything
+ * past five messages — several receipts confirmed at once — goes out as
+ * ordinary pushes instead.
+ */
+async function sendBatched(
+  replyToken: string,
+  lineUserId: string,
+  messages: LineMessage[],
+): Promise<void> {
+  if (messages.length === 0) return;
+
+  const [first, ...rest] = chunk(messages, LINE_MESSAGE_BATCH);
+  await replyOrPush(replyToken, lineUserId, first);
+
+  for (const batch of rest) {
+    await push(lineUserId, batch);
+  }
+}
+
+/** Exported for its own test — batching arithmetic is cheap to get off by one. */
+export function chunk<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
 }
 
 // ─── Buttons ──────────────────────────────────────────────────────────────
@@ -259,6 +327,10 @@ async function postbackMessages(
  * not.
  */
 async function submitMessages(user: LineUser, documentId: string): Promise<LineMessage[]> {
+  // A photo sent moments ago and never confirmed must not be silently left
+  // out of the claim it was meant for.
+  await processPendingReceipts(user.id, documentId);
+
   let result: Awaited<ReturnType<typeof submitClaim>>;
 
   try {

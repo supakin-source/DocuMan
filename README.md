@@ -149,17 +149,27 @@ the pages have no way to say who is looking.
 ### The conversation
 
 Send a photo — a receipt, a ticket, a toll slip, a screenshot of a map route —
-and it becomes a line on the current claim, read by Gemini and answered with a
-card showing what was found and what was not. Everything else is a command,
-matched on a phrase rather than an exact string, since people type sentences:
+and it is stored, unread. Receipts tend to arrive as a burst of several photos
+in a row, and reading each one the moment it lands would answer with a running
+total that looks like it is double-counting the ones already sent — it is not,
+but a chat is not where a running total should live mid-upload. So a photo is
+only acknowledged ("รับรูปแล้ว") until the burst is over, at which point every
+one of them is read by Gemini together and answered with a card per line
+showing what was found and what was not. Everything else is a command, matched
+on a phrase rather than an exact string, since people type sentences:
 
 | Say | What happens |
 | --- | ------------ |
+| “ครบแล้ว”     | Reads every photo sent so far, all at once |
 | “รายการ”     | The claim as it stands, with its total |
 | “ส่งอนุมัติ”   | Signs it with the stored signature and sends it |
 | “เริ่มใหม่”    | Starts a fresh claim |
 | “ลายเซ็น”     | Opens the page to draw or redraw the signature |
 | “สรุป”        | The month's approved total (approvers only) |
+
+Forgetting "ครบแล้ว" does not lose a receipt: "รายการ" and "ส่งอนุมัติ" both
+read whatever is still waiting before doing anything else, so a claim is never
+submitted with a photo silently left out.
 
 **There is no "current claim" table.** It is derived: the most recently touched
 document that is still editable. That is the draft being built — or the document

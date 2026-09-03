@@ -10,7 +10,7 @@ import { ValidationError } from "@/lib/domain/errors";
 import { DEFAULT_RATE_PER_KM, computeItemAmount } from "@/lib/domain/items";
 import { getMessageContent } from "@/lib/line/client";
 import { extractTravelItem } from "@/lib/ocr/travel";
-import { storeAttachment } from "@/lib/storage/attachments";
+import { readAttachment, storeAttachment } from "@/lib/storage/attachments";
 
 /**
  * The claim, as a conversation.
@@ -156,67 +156,115 @@ function toDraftLine(item: {
   };
 }
 
+/** Attachments already received but not yet read into a line, oldest first. */
+function pendingAttachments(documentId: string) {
+  return prisma.attachment.findMany({
+    where: { documentId, itemId: null },
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+  });
+}
+
+/** How many receipts are still waiting to be read, for the acknowledgement. */
+export function countPendingReceipts(documentId: string): Promise<number> {
+  return prisma.attachment.count({ where: { documentId, itemId: null } });
+}
+
 /**
- * Turns a photo the user sent into a line on their current claim.
+ * Stores a photo the user sent, without reading it yet.
  *
- * Storing and reading run together rather than one after the other: they need
- * the same bytes and neither depends on the other's result, and the user is
- * watching a chat window for the answer. Reading is allowed to fail — a blurry
- * photo still becomes a line, blank, for them to fill in, rather than an error
- * that leaves them holding a receipt with nowhere to put it.
+ * Receipts often arrive in a burst — several photos within seconds of each
+ * other — and reading each one the moment it lands answers with a running
+ * total that looks like it is double-counting the ones already sent, even
+ * though it is not. So a photo only sits here as an attachment with no line
+ * behind it until the user says the burst is over, at which point
+ * `processPendingReceipts` reads all of them together.
  */
-export async function addReceipt(input: {
+export async function receiveReceipt(input: {
   userId: string;
   messageId: string;
-}): Promise<{ documentId: string; itemId: string; state: DraftState }> {
+}): Promise<{ documentId: string; pendingCount: number }> {
   const documentId = await currentDocumentId(input.userId);
   const content = await getMessageContent(input.messageId);
-  const bytes = toBytes(content.bytes);
 
-  const [attachment, extraction] = await Promise.all([
-    storeAttachment({
-      documentId,
-      fileName: `line-${input.messageId}.jpg`,
-      mimeType: content.mimeType,
-      bytes,
-    }),
-    extractTravelItem({ bytes, mimeType: content.mimeType }).catch(
-      (error: unknown) => {
-        console.error("OCR failed for a LINE receipt on document", documentId, error);
-        return null;
-      },
-    ),
-  ]);
-
-  const type = extraction?.type ?? "PUBLIC_TRANSPORT";
-  const isMileage = type === "PERSONAL_VEHICLE";
-
-  const created = await appendItem(documentId, input.userId, {
-    type,
-    // The claim is for a journey that has happened, so today is the safest
-    // stand-in when the document does not print a date — and it is the one the
-    // user is most likely to accept without editing.
-    incurredOn: (extraction?.incurredOn ?? new Date().toISOString().slice(0, 10)),
-    origin: extraction?.origin ?? null,
-    destination: extraction?.destination ?? null,
-    purpose: "ไปปฏิบัติงาน",
-    distanceKm: extraction?.distanceKm ?? null,
-    ratePerKm: isMileage ? (extraction?.ratePerKm ?? DEFAULT_RATE_PER_KM) : null,
-    // Zero rather than a refusal: an unreadable amount is a gap to fill, and
-    // submitDocument already blocks a claim that still has one.
-    amount: computeItemAmount({
-      type,
-      distanceKm: extraction?.distanceKm,
-      ratePerKm: extraction?.ratePerKm ?? DEFAULT_RATE_PER_KM,
-      amount: extraction?.amount,
-    }),
-    attachmentId: attachment.id,
+  await storeAttachment({
+    documentId,
+    fileName: `line-${input.messageId}.jpg`,
+    mimeType: content.mimeType,
+    bytes: toBytes(content.bytes),
   });
+
+  return { documentId, pendingCount: await countPendingReceipts(documentId) };
+}
+
+/**
+ * Reads every receipt still waiting and turns each into a line.
+ *
+ * Run explicitly ("ครบแล้ว") or implicitly by anything that needs the final
+ * list — viewing the claim or submitting it — so forgetting the confirmation
+ * phrase never silently drops a receipt that was actually sent.
+ *
+ * One at a time rather than in parallel: two lines appended concurrently would
+ * both read the item count before either had written it, landing on the same
+ * sortOrder, and each one's re-totalling could miss the other's still-uncommitted
+ * row. Sequential costs a little time; it does not cost correctness.
+ */
+export async function processPendingReceipts(
+  userId: string,
+  documentId: string,
+): Promise<{ newLines: DraftLine[]; state: DraftState }> {
+  const pending = await pendingAttachments(documentId);
+  const newItemIds: string[] = [];
+
+  for (const attachment of pending) {
+    const file = await readAttachment(attachment.id);
+    if (!file) continue; // Stored moments ago; a miss here is not recoverable.
+
+    const extraction = await extractTravelItem({
+      bytes: file.bytes,
+      mimeType: file.mimeType,
+    }).catch((error: unknown) => {
+      console.error("OCR failed for a LINE receipt on document", documentId, error);
+      return null;
+    });
+
+    const type = extraction?.type ?? "PUBLIC_TRANSPORT";
+    const isMileage = type === "PERSONAL_VEHICLE";
+
+    const created = await appendItem(documentId, userId, {
+      type,
+      // The claim is for a journey that has happened, so today is the safest
+      // stand-in when the document does not print a date — and it is the one
+      // the user is most likely to accept without editing.
+      incurredOn: extraction?.incurredOn ?? new Date().toISOString().slice(0, 10),
+      origin: extraction?.origin ?? null,
+      destination: extraction?.destination ?? null,
+      purpose: "ไปปฏิบัติงาน",
+      distanceKm: extraction?.distanceKm ?? null,
+      ratePerKm: isMileage ? (extraction?.ratePerKm ?? DEFAULT_RATE_PER_KM) : null,
+      // Zero rather than a refusal: an unreadable amount is a gap to fill, and
+      // submitDocument already blocks a claim that still has one.
+      amount: computeItemAmount({
+        type,
+        distanceKm: extraction?.distanceKm,
+        ratePerKm: extraction?.ratePerKm ?? DEFAULT_RATE_PER_KM,
+        amount: extraction?.amount,
+      }),
+      attachmentId: attachment.id,
+    });
+
+    newItemIds.push(created.id);
+  }
 
   const state = await readDraft(documentId);
   if (!state) throw new ValidationError("ไม่พบเอกสาร");
 
-  return { documentId, itemId: created.id, state };
+  const byId = new Map(state.lines.map((line) => [line.id, line]));
+  const newLines = newItemIds
+    .map((id) => byId.get(id))
+    .filter((line): line is DraftLine => Boolean(line));
+
+  return { newLines, state };
 }
 
 /**
