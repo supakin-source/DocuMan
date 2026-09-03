@@ -142,14 +142,17 @@ join them on.
 
 Set the LIFF app's **Endpoint URL to `https://<app>/liff`** — not the site root.
 A LIFF app has one Endpoint URL, so `liffUrl()`'s `/liff/signature`,
-`/liff/items/[id]` and `/liff/documents/[id]` cannot each be it; a `liff.line.me`
-link opens that one Endpoint unchanged, with the extra path packed into a
-`liff.state` query parameter, and LIFF completes a second, real navigation to
-it once `liff.init()` resolves. `/liff` (`src/app/liff/page.tsx`) exists to be
-that landing spot and finish the hop itself if the SDK's own does not — the
-site root cannot serve this because it is `(app)`'s dashboard, which sends
-anyone with no session to `/login` before the LIFF SDK has run at all. The
-app's **Scopes** must include `openid`, or `liff.getIDToken()` returns null and
+`/liff/items/[id]` and `/liff/documents/[id]` cannot each be it. A `liff.line.me`
+link opens that one Endpoint unchanged, with whatever follows the LIFF id
+packed into a `liff.state` query parameter, then LIFF completes a second, real
+navigation whose target is **the Endpoint's own path with that remainder
+appended** — so `liffUrl()` strips the `/liff` the Endpoint already supplies
+before building the link, or the second hop lands on `/liff/liff/signature`
+rather than `/liff/signature`. `/liff` (`src/app/liff/page.tsx`) exists to be
+the landing spot for the first hop and finish the second itself if the SDK's
+own does not — the site root cannot serve this because it is `(app)`'s
+dashboard, which sends anyone with no session to `/login` before the LIFF SDK
+has run at all. The app's **Scopes** must include `openid`, or `liff.getIDToken()` returns null and
 the pages have no way to say who is looking.
 
 ### The conversation

@@ -20,14 +20,21 @@ describe("liffUrl", () => {
     }
   }
 
-  it("puts the path after the LIFF id, where LINE appends it to the endpoint", () => {
-    // The endpoint URL is the site root, so LINE opening this lands on
-    // https://<app>/liff/signature. Passing the path as a query parameter
-    // instead would append nothing and open the root.
+  it("strips the /liff prefix already baked into the Endpoint URL", () => {
+    // The Endpoint URL is fixed at /liff, and LIFF's own secondary redirect
+    // appends whatever follows the LIFF id onto that path — passing the whole
+    // absolute path here would land on /liff/liff/signature, a 404, instead
+    // of /liff/signature.
+    withEnv({ LINE_LIFF_ID: liffId }, () => {
+      assert.equal(liffUrl("/liff/signature"), `https://liff.line.me/${liffId}/signature`);
+    });
+  });
+
+  it("strips the prefix from a nested path too", () => {
     withEnv({ LINE_LIFF_ID: liffId }, () => {
       assert.equal(
-        liffUrl("/liff/signature"),
-        `https://liff.line.me/${liffId}/liff/signature`,
+        liffUrl("/liff/items/abc"),
+        `https://liff.line.me/${liffId}/items/abc`,
       );
     });
   });
@@ -36,7 +43,7 @@ describe("liffUrl", () => {
     withEnv({ LINE_LIFF_ID: liffId }, () => {
       assert.equal(
         liffUrl("liff/items/abc"),
-        `https://liff.line.me/${liffId}/liff/items/abc`,
+        `https://liff.line.me/${liffId}/items/abc`,
       );
     });
   });

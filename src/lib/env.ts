@@ -101,18 +101,29 @@ export function appUrl(): string {
  * looking. The variable is therefore optional rather than required: the bot
  * works without it, it just cannot ask for anything that needs identity.
  */
+/** The Endpoint URL every LIFF app in this project is configured with. */
+const LIFF_BASE_PATH = "/liff";
+
 export function liffUrl(path: string): string {
   const withSlash = path.startsWith("/") ? path : `/${path}`;
   const liffId = process.env.LINE_LIFF_ID?.trim();
 
   if (!liffId) return `${appUrl()}${withSlash}`;
 
-  // The path here is not appended to the app's endpoint URL on the request
-  // that actually lands — LIFF opens the endpoint unchanged, with this path
-  // packed into a `liff.state` query parameter, and completes a second real
-  // navigation to it once `liff.init()` resolves. `src/app/liff/page.tsx` is
-  // that endpoint, and finishes the hop itself if the SDK's own does not.
-  return `https://liff.line.me/${liffId}${withSlash}`;
+  // What follows the LIFF id is not swapped in for the request that actually
+  // lands — LIFF opens the Endpoint URL first, with this part packed into a
+  // `liff.state` query parameter, then completes a second real navigation
+  // whose target is the Endpoint's own path with this part APPENDED to it
+  // (documented behaviour, confirmed against the 404 that results otherwise).
+  // The Endpoint is `/liff` (`src/app/liff/page.tsx`), which is already the
+  // first segment of `withSlash` — appending the full path a second time
+  // would land on `/liff/liff/signature` instead of `/liff/signature`, so
+  // only the remainder after that shared prefix belongs on this link.
+  const extra = withSlash.startsWith(LIFF_BASE_PATH)
+    ? withSlash.slice(LIFF_BASE_PATH.length)
+    : withSlash;
+
+  return `https://liff.line.me/${liffId}${extra}`;
 }
 
 /**
