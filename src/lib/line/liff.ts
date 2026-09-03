@@ -42,13 +42,27 @@ export type LiffEnv = z.infer<typeof liffEnvSchema>;
 
 let cached: LiffEnv | undefined;
 
+/**
+ * The deployment is missing the LIFF settings entirely.
+ *
+ * Its own class because it is not a failure the person holding the phone can
+ * do anything about, and telling them "please try again" — which is what an
+ * unrecognised error becomes — sends them round a loop that cannot end.
+ */
+export class LiffNotConfiguredError extends Error {
+  constructor(detail: string) {
+    super(detail);
+    this.name = "LiffNotConfiguredError";
+  }
+}
+
 export function liffEnv(): LiffEnv {
   if (cached) return cached;
 
   const parsed = liffEnvSchema.safeParse(process.env);
   if (!parsed.success) {
     const missing = parsed.error.issues.map((issue) => issue.message).join("\n  - ");
-    throw new Error(`Invalid LIFF environment:\n  - ${missing}`);
+    throw new LiffNotConfiguredError(`Invalid LIFF environment:\n  - ${missing}`);
   }
 
   cached = parsed.data;

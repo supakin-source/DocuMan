@@ -9,7 +9,8 @@ import {
   ValidationError,
 } from "@/lib/domain/errors";
 import { GoogleReauthRequiredError } from "@/lib/google/token";
-import { LiffUnauthenticatedError } from "@/lib/line/liff";
+import { LineApiError } from "@/lib/line/client";
+import { LiffNotConfiguredError, LiffUnauthenticatedError } from "@/lib/line/liff";
 import { OcrFailedError, UnsupportedDocumentError } from "@/lib/ocr/gemini";
 
 export type ApiError = {
@@ -33,6 +34,29 @@ export function toErrorResponse(error: unknown): NextResponse<ApiError> {
   }
   if (error instanceof LiffUnauthenticatedError) {
     return NextResponse.json({ error: error.message }, { status: 401 });
+  }
+  // Both of these used to fall through to the generic 500 below, which told
+  // the person holding the phone to try again — the one thing that cannot
+  // help, since neither is theirs to fix. The detail stays in the log; the
+  // response says whose problem it is.
+  if (error instanceof LiffNotConfiguredError) {
+    console.error("LIFF is not configured on this deployment", error);
+    return NextResponse.json(
+      { error: "ระบบยังตั้งค่า LIFF ไม่ครบ กรุณาแจ้งผู้ดูแลระบบ" },
+      { status: 503 },
+    );
+  }
+  if (error instanceof LineApiError) {
+    console.error("LINE rejected a call from an API route", error);
+    return NextResponse.json(
+      {
+        error:
+          error.status === 403
+            ? "LINE ปฏิเสธคำขอ (403) — ตรวจสอบ LINE_LIFF_CHANNEL_ID ว่าตรงกับ Channel ID ของแชนแนลที่สร้าง LIFF app ไว้"
+            : `เชื่อมต่อ LINE ไม่สำเร็จ (${error.status}) กรุณาแจ้งผู้ดูแลระบบ`,
+      },
+      { status: 502 },
+    );
   }
   if (error instanceof ForbiddenError) {
     return NextResponse.json({ error: error.message }, { status: 403 });
